@@ -1,0 +1,20 @@
+## Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Temporary files
+*.tmp
+*.bak
+*~
+
+## App state runtime generated
+gui_state/*.ini
