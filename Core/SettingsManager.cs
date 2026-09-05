@@ -6,6 +6,7 @@ namespace TimeBomb.Core
 {
     public class SettingsManager
     {
+        private static readonly object _fileLock = new object();
         private readonly string _iniPath;
         private readonly Dictionary<string, Dictionary<string, string>> _data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
 
@@ -156,28 +157,36 @@ namespace TimeBomb.Core
 
         private void ParseIniFile()
         {
-            if (!File.Exists(_iniPath)) return;
-
-            string currentSection = "";
-            foreach (string rawLine in File.ReadAllLines(_iniPath))
+            lock (_fileLock)
             {
-                string line = rawLine.Trim();
-                if (string.IsNullOrEmpty(line) || line.StartsWith(";") || line.StartsWith("#"))
-                    continue;
+                if (!File.Exists(_iniPath)) return;
 
-                if (line.StartsWith("[") && line.EndsWith("]"))
+                try
                 {
-                    currentSection = line.Substring(1, line.Length - 2).Trim();
-                    if (!_data.ContainsKey(currentSection))
-                        _data[currentSection] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    _data.Clear();
+                    string currentSection = "";
+                    foreach (string rawLine in File.ReadAllLines(_iniPath))
+                    {
+                        string line = rawLine.Trim();
+                        if (string.IsNullOrEmpty(line) || line.StartsWith(";") || line.StartsWith("#"))
+                            continue;
+
+                        if (line.StartsWith("[") && line.EndsWith("]"))
+                        {
+                            currentSection = line.Substring(1, line.Length - 2).Trim();
+                            if (!_data.ContainsKey(currentSection))
+                                _data[currentSection] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                        }
+                        else if (!string.IsNullOrEmpty(currentSection) && line.Contains("="))
+                        {
+                            int idx = line.IndexOf('=');
+                            string key = line.Substring(0, idx).Trim();
+                            string val = line.Substring(idx + 1).Trim();
+                            _data[currentSection][key] = val;
+                        }
+                    }
                 }
-                else if (!string.IsNullOrEmpty(currentSection) && line.Contains("="))
-                {
-                    int idx = line.IndexOf('=');
-                    string key = line.Substring(0, idx).Trim();
-                    string val = line.Substring(idx + 1).Trim();
-                    _data[currentSection][key] = val;
-                }
+                catch { }
             }
         }
 
@@ -185,49 +194,52 @@ namespace TimeBomb.Core
         {
             try
             {
-                ParseIniFile();
-
-                string sec = "Instance_" + InstanceId;
-                SetValue(sec, "x", WindowX.ToString());
-                SetValue(sec, "y", WindowY.ToString());
-                SetValue(sec, "mode", Mode);
-                SetValue(sec, "LastSetMinutes", LastSetMinutes.ToString());
-                SetValue(sec, "LastSetSeconds", LastSetSeconds.ToString());
-                SetValue(sec, "click_through", ClickThrough.ToString().ToLowerInvariant());
-                SetValue(sec, "opacity", Opacity.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
-
-                if (InstanceId == 1)
+                lock (_fileLock)
                 {
-                    SetValue("Position", "x", WindowX.ToString());
-                    SetValue("Position", "y", WindowY.ToString());
-                    SetValue("General", "mode", Mode);
-                    SetValue("Timer", "LastSetMinutes", LastSetMinutes.ToString());
-                    SetValue("Timer", "LastSetSeconds", LastSetSeconds.ToString());
-                    SetValue("Window", "click_through", ClickThrough.ToString().ToLowerInvariant());
-                    SetValue("Window", "opacity", Opacity.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
-                    SetValue("Gamepad", "enabled", GamepadEnabled.ToString().ToLowerInvariant());
-                    SetValue("Gamepad", "vibration", GamepadVibration.ToString().ToLowerInvariant());
-                    SetValue("Interval", "Prepare", IntervalPrepare.ToString());
-                    SetValue("Interval", "Work", IntervalWork.ToString());
-                    SetValue("Interval", "Rest", IntervalRest.ToString());
-                    SetValue("Interval", "End", IntervalEnd.ToString());
-                    SetValue("Interval", "Loops", IntervalLoops.ToString());
-                    SetValue("Interval", "WindowX", IntervalWindowX.ToString());
-                    SetValue("Interval", "WindowY", IntervalWindowY.ToString());
-                }
+                    ParseIniFile();
 
-                List<string> lines = new List<string>();
-                foreach (var section in _data)
-                {
-                    lines.Add("[" + section.Key + "]");
-                    foreach (var kvp in section.Value)
+                    string sec = "Instance_" + InstanceId;
+                    SetValue(sec, "x", WindowX.ToString());
+                    SetValue(sec, "y", WindowY.ToString());
+                    SetValue(sec, "mode", Mode);
+                    SetValue(sec, "LastSetMinutes", LastSetMinutes.ToString());
+                    SetValue(sec, "LastSetSeconds", LastSetSeconds.ToString());
+                    SetValue(sec, "click_through", ClickThrough.ToString().ToLowerInvariant());
+                    SetValue(sec, "opacity", Opacity.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
+
+                    if (InstanceId == 1)
                     {
-                        lines.Add(kvp.Key + "=" + kvp.Value);
+                        SetValue("Position", "x", WindowX.ToString());
+                        SetValue("Position", "y", WindowY.ToString());
+                        SetValue("General", "mode", Mode);
+                        SetValue("Timer", "LastSetMinutes", LastSetMinutes.ToString());
+                        SetValue("Timer", "LastSetSeconds", LastSetSeconds.ToString());
+                        SetValue("Window", "click_through", ClickThrough.ToString().ToLowerInvariant());
+                        SetValue("Window", "opacity", Opacity.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
+                        SetValue("Gamepad", "enabled", GamepadEnabled.ToString().ToLowerInvariant());
+                        SetValue("Gamepad", "vibration", GamepadVibration.ToString().ToLowerInvariant());
+                        SetValue("Interval", "Prepare", IntervalPrepare.ToString());
+                        SetValue("Interval", "Work", IntervalWork.ToString());
+                        SetValue("Interval", "Rest", IntervalRest.ToString());
+                        SetValue("Interval", "End", IntervalEnd.ToString());
+                        SetValue("Interval", "Loops", IntervalLoops.ToString());
+                        SetValue("Interval", "WindowX", IntervalWindowX.ToString());
+                        SetValue("Interval", "WindowY", IntervalWindowY.ToString());
                     }
-                    lines.Add("");
-                }
 
-                File.WriteAllLines(_iniPath, lines);
+                    List<string> lines = new List<string>();
+                    foreach (var section in _data)
+                    {
+                        lines.Add("[" + section.Key + "]");
+                        foreach (var kvp in section.Value)
+                        {
+                            lines.Add(kvp.Key + "=" + kvp.Value);
+                        }
+                        lines.Add("");
+                    }
+
+                    File.WriteAllLines(_iniPath, lines);
+                }
             }
             catch
             {

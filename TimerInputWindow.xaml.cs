@@ -8,6 +8,8 @@ namespace TimeBomb
     {
         public event Action<int, int> OnTimeConfirmed;
 
+        private bool _isClosing = false;
+
         public TimerInputWindow(int initialMinutes, int initialSeconds)
         {
             InitializeComponent();
@@ -22,8 +24,15 @@ namespace TimeBomb
 
             Deactivated += (s, e) =>
             {
-                try { Close(); } catch { }
+                SafeClose();
             };
+        }
+
+        private void SafeClose()
+        {
+            if (_isClosing) return;
+            _isClosing = true;
+            try { Close(); } catch { }
         }
 
         private void TxtInput_KeyDown(object sender, KeyEventArgs e)
@@ -36,7 +45,7 @@ namespace TimeBomb
             else if (e.Key == Key.Escape)
             {
                 e.Handled = true;
-                Close();
+                SafeClose();
             }
         }
 
@@ -47,7 +56,7 @@ namespace TimeBomb
 
         private void BtnCancel_Click(object sender, RoutedEventArgs e)
         {
-            Close();
+            SafeClose();
         }
 
         private void ConfirmAndClose()
@@ -55,7 +64,7 @@ namespace TimeBomb
             if (TryParseTime(TxtInput.Text, out int minutes, out int seconds))
             {
                 OnTimeConfirmed?.Invoke(minutes, seconds);
-                Close();
+                SafeClose();
             }
             else
             {

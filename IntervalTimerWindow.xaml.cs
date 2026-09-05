@@ -269,23 +269,32 @@ namespace TimeBomb
         {
             try
             {
-                var screen = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)Left, (int)Top));
+                double currentLeft = double.IsNaN(Left) || double.IsInfinity(Left) ? 250 : Left;
+                double currentTop = double.IsNaN(Top) || double.IsInfinity(Top) ? 250 : Top;
+
+                var screen = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)currentLeft, (int)currentTop));
                 var area = screen.WorkingArea;
 
-                double newLeft = Left;
-                double newTop = Top;
+                double newLeft = currentLeft;
+                double newTop = currentTop;
+
+                double width = ActualWidth > 0 ? ActualWidth : Width;
+                double height = ActualHeight > 0 ? ActualHeight : Height;
 
                 if (newLeft < area.Left) newLeft = area.Left;
-                if (newLeft + ActualWidth > area.Right) newLeft = area.Right - ActualWidth;
+                if (newLeft + width > area.Right) newLeft = area.Right - width;
                 if (newTop < area.Top) newTop = area.Top;
-                if (newTop + ActualHeight > area.Bottom) newTop = area.Bottom - ActualHeight;
+                if (newTop + height > area.Bottom) newTop = area.Bottom - height;
 
                 Left = newLeft;
                 Top = newTop;
 
-                _settings.IntervalWindowX = (int)Left;
-                _settings.IntervalWindowY = (int)Top;
-                _settings.Save();
+                if (_settings != null)
+                {
+                    _settings.IntervalWindowX = (int)Left;
+                    _settings.IntervalWindowY = (int)Top;
+                    _settings.Save();
+                }
             }
             catch { }
         }

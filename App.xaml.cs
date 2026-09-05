@@ -30,35 +30,68 @@ namespace TimeBomb
 
             Manager.OnDisplayChanged += (main, prefix, sub, isRed, isBlinkHidden) =>
             {
-                Window.UpdateDisplay(main, prefix, sub, isRed, isBlinkHidden);
+                Window?.UpdateDisplay(main, prefix, sub, isRed, isBlinkHidden);
             };
 
             Manager.OnVisibilityToggled += isVisible =>
             {
-                Window.Dispatcher.Invoke(() =>
+                try
                 {
-                    if (isVisible) Window.Show();
-                    else Window.Hide();
-                });
+                    if (Window != null && Window.Dispatcher != null && !Window.Dispatcher.HasShutdownStarted)
+                    {
+                        Window.Dispatcher.Invoke(() =>
+                        {
+                            try
+                            {
+                                if (isVisible) Window.Show();
+                                else Window.Hide();
+                            }
+                            catch { }
+                        });
+                    }
+                }
+                catch { }
             };
 
             Manager.OnAlarmTriggered += () =>
             {
-                gamepad?.StartAlarmVibration();
-                Window.Dispatcher.Invoke(() =>
+                try
                 {
-                    Alarm.Show();
-                    Alarm.Activate();
-                });
+                    gamepad?.StartAlarmVibration();
+                    if (Alarm != null && Alarm.Dispatcher != null && !Alarm.Dispatcher.HasShutdownStarted)
+                    {
+                        Alarm.Dispatcher.Invoke(() =>
+                        {
+                            try
+                            {
+                                Alarm.Show();
+                                Alarm.Activate();
+                            }
+                            catch { }
+                        });
+                    }
+                }
+                catch { }
             };
 
             Manager.OnAlarmDismissed += () =>
             {
-                gamepad?.StopAlarmVibration();
-                Window.Dispatcher.Invoke(() =>
+                try
                 {
-                    Alarm.Hide();
-                });
+                    gamepad?.StopAlarmVibration();
+                    if (Alarm != null && Alarm.Dispatcher != null && !Alarm.Dispatcher.HasShutdownStarted)
+                    {
+                        Alarm.Dispatcher.Invoke(() =>
+                        {
+                            try
+                            {
+                                Alarm.Hide();
+                            }
+                            catch { }
+                        });
+                    }
+                }
+                catch { }
             };
         }
 
@@ -96,6 +129,16 @@ namespace TimeBomb
             DispatcherUnhandledException += (s, ev) =>
             {
                 ev.Handled = true;
+            };
+
+            AppDomain.CurrentDomain.UnhandledException += (s, ev) =>
+            {
+                // Prevent silent process crash from unhandled background domain exceptions
+            };
+
+            System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (s, ev) =>
+            {
+                ev.SetObserved();
             };
 
             bool isPrimary = false;
@@ -295,14 +338,15 @@ namespace TimeBomb
 
         public TimerInstance GetTargetInstance()
         {
-            if (_instances.Count == 0) return null;
+            var list = _instances.ToArray();
+            if (list.Length == 0) return null;
 
             if (Win32Api.GetCursorPos(out Win32Api.POINT pt))
             {
-                for (int i = _instances.Count - 1; i >= 0; i--)
+                for (int i = list.Length - 1; i >= 0; i--)
                 {
-                    var inst = _instances[i];
-                    if (inst.Window.IsVisible && inst.Window.IsPointInside(pt.X, pt.Y))
+                    var inst = list[i];
+                    if (inst != null && inst.Window != null && inst.Window.IsVisible && inst.Window.IsPointInside(pt.X, pt.Y))
                     {
                         if (_activeInstance != inst)
                         {
@@ -313,24 +357,27 @@ namespace TimeBomb
                 }
             }
 
-            return _activeInstance ?? _instances[_instances.Count - 1];
+            return _activeInstance ?? list[list.Length - 1];
         }
 
         private void WireHookEvents()
         {
-            _hook.IsAlarmActive = () => _instances.Exists(i => i.Manager.IsAlarmActive);
+            _hook.IsAlarmActive = () => _instances.Exists(i => i.Manager != null && i.Manager.IsAlarmActive);
             _hook.OnDismissAlarmRequested += () =>
             {
-                Dispatcher.Invoke(() =>
+                if (Dispatcher != null && !Dispatcher.HasShutdownStarted)
                 {
-                    foreach (var inst in _instances)
+                    Dispatcher.Invoke(() =>
                     {
-                        if (inst.Manager.IsAlarmActive)
+                        foreach (var inst in _instances.ToArray())
                         {
-                            inst.Manager.DismissAlarm();
+                            if (inst != null && inst.Manager != null && inst.Manager.IsAlarmActive)
+                            {
+                                inst.Manager.DismissAlarm();
+                            }
                         }
-                    }
-                });
+                    });
+                }
             };
 
             _hook.OnToggleRequested += ToggleAll;
@@ -463,16 +510,19 @@ namespace TimeBomb
 
             _gamepadManager.OnDismissAlarmRequested += () =>
             {
-                Dispatcher.Invoke(() =>
+                if (Dispatcher != null && !Dispatcher.HasShutdownStarted)
                 {
-                    foreach (var inst in _instances)
+                    Dispatcher.Invoke(() =>
                     {
-                        if (inst.Manager.IsAlarmActive)
+                        foreach (var inst in _instances.ToArray())
                         {
-                            inst.Manager.DismissAlarm();
+                            if (inst != null && inst.Manager != null && inst.Manager.IsAlarmActive)
+                            {
+                                inst.Manager.DismissAlarm();
+                            }
                         }
-                    }
-                });
+                    });
+                }
             };
         }
 
@@ -486,27 +536,31 @@ namespace TimeBomb
                 if (!isCtrlDown) return false;
 
                 bool suppress = false;
-                Dispatcher.Invoke(() =>
+                if (Dispatcher != null && !Dispatcher.HasShutdownStarted)
                 {
-                    TimerInstance hit = null;
-                    for (int i = _instances.Count - 1; i >= 0; i--)
+                    Dispatcher.Invoke(() =>
                     {
-                        var inst = _instances[i];
-                        if (inst.Window.IsVisible && inst.Window.IsClickThrough && inst.Window.IsPointInside(screenX, screenY))
+                        var list = _instances.ToArray();
+                        TimerInstance hit = null;
+                        for (int i = list.Length - 1; i >= 0; i--)
                         {
-                            hit = inst;
-                            break;
+                            var inst = list[i];
+                            if (inst != null && inst.Window != null && inst.Window.IsVisible && inst.Window.IsClickThrough && inst.Window.IsPointInside(screenX, screenY))
+                            {
+                                hit = inst;
+                                break;
+                            }
                         }
-                    }
 
-                    if (hit != null)
-                    {
-                        hit.Window.SetClickThrough(false);
-                        _soundManager?.Play("adjust.wav");
-                        UpdateTrayIconMenu();
-                        suppress = true;
-                    }
-                });
+                        if (hit != null && hit.Window != null)
+                        {
+                            hit.Window.SetClickThrough(false);
+                            _soundManager?.Play("adjust.wav");
+                            UpdateTrayIconMenu();
+                            suppress = true;
+                        }
+                    });
+                }
 
                 return suppress;
             };
@@ -514,45 +568,52 @@ namespace TimeBomb
 
         private void ToggleIntervalTimer()
         {
-            Dispatcher.Invoke(() =>
+            if (Dispatcher != null && !Dispatcher.HasShutdownStarted)
             {
-                if (_intervalWindow == null)
+                Dispatcher.Invoke(() =>
                 {
-                    _intervalWindow = new IntervalTimerWindow(_baseSettings, _soundManager);
-                }
+                    if (_intervalWindow == null)
+                    {
+                        _intervalWindow = new IntervalTimerWindow(_baseSettings, _soundManager);
+                    }
 
-                if (_intervalWindow.IsVisible)
-                {
-                    _intervalWindow.Hide();
-                }
-                else
-                {
-                    _intervalWindow.Show();
-                    _intervalWindow.Activate();
-                }
-            });
+                    if (_intervalWindow.IsVisible)
+                    {
+                        _intervalWindow.Hide();
+                    }
+                    else
+                    {
+                        _intervalWindow.Show();
+                        _intervalWindow.Activate();
+                    }
+                });
+            }
         }
 
         private void ToggleAll()
         {
-            Dispatcher.Invoke(() =>
+            if (Dispatcher != null && !Dispatcher.HasShutdownStarted)
             {
-                bool anyVisible = _instances.Exists(i => i.Window.IsVisible);
-                if (!anyVisible)
+                Dispatcher.Invoke(() =>
                 {
-                    foreach (var inst in _instances)
+                    var list = _instances.ToArray();
+                    bool anyVisible = Array.Exists(list, i => i != null && i.Window != null && i.Window.IsVisible);
+                    if (!anyVisible)
                     {
-                        inst.Manager.Start(playSound: false);
+                        foreach (var inst in list)
+                        {
+                            inst?.Manager?.Start(playSound: false);
+                        }
                     }
-                }
-                else
-                {
-                    foreach (var inst in _instances)
+                    else
                     {
-                        inst.Manager.Stop();
+                        foreach (var inst in list)
+                        {
+                            inst?.Manager?.Stop();
+                        }
                     }
-                }
-            });
+                });
+            }
         }
 
         private void SetupTrayIcon()

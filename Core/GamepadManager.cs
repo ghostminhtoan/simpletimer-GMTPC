@@ -196,22 +196,26 @@ namespace TimeBomb.Core
         {
             if (!_settings.GamepadEnabled) return;
 
-            GamepadButtons current = PollCurrentGamepadButtons();
-
-            bool hasController = (current != GamepadButtons.None || _activeXInputUserIndex >= 0);
-            IsConnected = hasController;
-
-            // Adaptive polling rate to minimize background CPU usage
-            if (!hasController && _pollTimer.Interval.TotalMilliseconds < 250)
+            try
             {
-                _pollTimer.Interval = TimeSpan.FromMilliseconds(250);
-            }
-            else if (hasController && _pollTimer.Interval.TotalMilliseconds > 20)
-            {
-                _pollTimer.Interval = TimeSpan.FromMilliseconds(16);
-            }
+                GamepadButtons current = PollCurrentGamepadButtons();
 
-            ProcessGamepadState(current);
+                bool hasController = (current != GamepadButtons.None || _activeXInputUserIndex >= 0);
+                IsConnected = hasController;
+
+                // Adaptive polling rate to minimize background CPU usage
+                if (!hasController && _pollTimer.Interval.TotalMilliseconds < 250)
+                {
+                    _pollTimer.Interval = TimeSpan.FromMilliseconds(250);
+                }
+                else if (hasController && _pollTimer.Interval.TotalMilliseconds > 20)
+                {
+                    _pollTimer.Interval = TimeSpan.FromMilliseconds(16);
+                }
+
+                ProcessGamepadState(current);
+            }
+            catch { }
         }
 
         private GamepadButtons PollCurrentGamepadButtons()
@@ -553,12 +557,20 @@ namespace TimeBomb.Core
         public void Dispose()
         {
             _pollTimer?.Stop();
+            _alarmRumbleTimer?.Stop();
             StopAlarmVibration();
 
             if (_xInputModule != IntPtr.Zero)
             {
-                Win32Api.FreeLibrary(_xInputModule);
+                try
+                {
+                    Win32Api.FreeLibrary(_xInputModule);
+                }
+                catch { }
                 _xInputModule = IntPtr.Zero;
+                _xInputGetState = null;
+                _xInputSetState = null;
+                _xInputLoaded = false;
             }
         }
     }

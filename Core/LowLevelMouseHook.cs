@@ -38,23 +38,27 @@ namespace TimeBomb.Core
 
         private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            if (nCode >= 0)
+            if (nCode >= 0 && lParam != IntPtr.Zero)
             {
-                int msg = wParam.ToInt32();
-                if (msg == Win32Api.WM_MBUTTONDOWN)
+                try
                 {
-                    var hookStruct = (Win32Api.MSLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(Win32Api.MSLLHOOKSTRUCT));
-                    if (OnMiddleClickCheck != null && OnMiddleClickCheck(hookStruct.pt.X, hookStruct.pt.Y))
+                    int msg = wParam.ToInt32();
+                    if (msg == Win32Api.WM_MBUTTONDOWN)
                     {
-                        _suppressNextMiddleUp = true;
-                        return (IntPtr)1; // Suppress middle-click so underlying window does not receive it
+                        var hookStruct = (Win32Api.MSLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(Win32Api.MSLLHOOKSTRUCT));
+                        if (OnMiddleClickCheck != null && OnMiddleClickCheck(hookStruct.pt.X, hookStruct.pt.Y))
+                        {
+                            _suppressNextMiddleUp = true;
+                            return (IntPtr)1; // Suppress middle-click so underlying window does not receive it
+                        }
+                    }
+                    else if (msg == Win32Api.WM_MBUTTONUP && _suppressNextMiddleUp)
+                    {
+                        _suppressNextMiddleUp = false;
+                        return (IntPtr)1; // Suppress corresponding up event
                     }
                 }
-                else if (msg == Win32Api.WM_MBUTTONUP && _suppressNextMiddleUp)
-                {
-                    _suppressNextMiddleUp = false;
-                    return (IntPtr)1; // Suppress corresponding up event
-                }
+                catch { }
             }
 
             return Win32Api.CallNextHookEx(_hookId, nCode, wParam, lParam);

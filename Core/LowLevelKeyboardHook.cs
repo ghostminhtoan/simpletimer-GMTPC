@@ -57,171 +57,175 @@ namespace TimeBomb.Core
 
         private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            if (nCode >= 0)
+            if (nCode >= 0 && lParam != IntPtr.Zero)
             {
-                int msg = wParam.ToInt32();
-                bool isKeyDown = (msg == Win32Api.WM_KEYDOWN || msg == Win32Api.WM_SYSKEYDOWN);
-                bool isKeyUp = (msg == Win32Api.WM_KEYUP || msg == Win32Api.WM_SYSKEYUP);
-
-                var hookStruct = (Win32Api.KBDLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(Win32Api.KBDLLHOOKSTRUCT));
-                uint vk = hookStruct.vkCode;
-
-                // 1. Alarm Active: Pressing ANY key on keyboard immediately dismisses the alarm
-                if (IsAlarmActive != null && IsAlarmActive())
+                try
                 {
-                    if (isKeyDown)
-                    {
-                        OnDismissAlarmRequested?.Invoke();
-                        return (IntPtr)1;
-                    }
-                }
+                    int msg = wParam.ToInt32();
+                    bool isKeyDown = (msg == Win32Api.WM_KEYDOWN || msg == Win32Api.WM_SYSKEYDOWN);
+                    bool isKeyUp = (msg == Win32Api.WM_KEYUP || msg == Win32Api.WM_SYSKEYUP);
 
-                // Safety check: verify if Windows key is physically held down (skip check while holding Up/Down)
-                if (_isWinDown && !_isUpHeld && !_isDownHeld && vk != Win32Api.VK_LWIN && vk != Win32Api.VK_RWIN)
-                {
-                    bool isWinPhysicallyDown = (Win32Api.GetAsyncKeyState(Win32Api.VK_LWIN) & 0x8000) != 0
-                                            || (Win32Api.GetAsyncKeyState(Win32Api.VK_RWIN) & 0x8000) != 0;
-                    if (!isWinPhysicallyDown)
-                    {
-                        _isWinDown = false;
-                    }
-                }
+                    var hookStruct = (Win32Api.KBDLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(Win32Api.KBDLLHOOKSTRUCT));
+                    uint vk = hookStruct.vkCode;
 
-                // Track Windows key (Left or Right)
-                if (vk == Win32Api.VK_LWIN || vk == Win32Api.VK_RWIN)
-                {
-                    if (isKeyDown)
+                    // 1. Alarm Active: Pressing ANY key on keyboard immediately dismisses the alarm
+                    if (IsAlarmActive != null && IsAlarmActive())
                     {
-                        _isWinDown = true;
-                    }
-                    else if (isKeyUp)
-                    {
-                        _isWinDown = false;
-                        if (_shortcutExecuted)
+                        if (isKeyDown)
                         {
-                            _shortcutExecuted = false;
-                            OnWinKeyReleased?.Invoke();
-                            // Suppress Win key release so Start Menu does not open
+                            OnDismissAlarmRequested?.Invoke();
                             return (IntPtr)1;
                         }
                     }
-                }
 
-                // Hotkey combinations with Win key
-                if (_isWinDown)
-                {
-                    if (isKeyDown)
+                    // Safety check: verify if Windows key is physically held down (skip check while holding Up/Down)
+                    if (_isWinDown && !_isUpHeld && !_isDownHeld && vk != Win32Api.VK_LWIN && vk != Win32Api.VK_RWIN)
                     {
-                        switch (vk)
+                        bool isWinPhysicallyDown = (Win32Api.GetAsyncKeyState(Win32Api.VK_LWIN) & 0x8000) != 0
+                                                || (Win32Api.GetAsyncKeyState(Win32Api.VK_RWIN) & 0x8000) != 0;
+                        if (!isWinPhysicallyDown)
                         {
-                            case Win32Api.VK_OEM_3: // ` or ~
-                                _shortcutExecuted = true;
-                                bool isCtrl = (Win32Api.GetAsyncKeyState(Win32Api.VK_CONTROL) & 0x8000) != 0;
-                                if (isCtrl)
-                                {
-                                    OnIntervalToggleRequested?.Invoke();
-                                }
-                                else
-                                {
-                                    OnToggleRequested?.Invoke();
-                                }
-                                ForceReleaseWinKey();
-                                return (IntPtr)1;
+                            _isWinDown = false;
+                        }
+                    }
 
-                            case Win32Api.VK_SPACE:  // Space
-                                _shortcutExecuted = true;
-                                OnPauseToggleRequested?.Invoke();
-                                ForceReleaseWinKey();
+                    // Track Windows key (Left or Right)
+                    if (vk == Win32Api.VK_LWIN || vk == Win32Api.VK_RWIN)
+                    {
+                        if (isKeyDown)
+                        {
+                            _isWinDown = true;
+                        }
+                        else if (isKeyUp)
+                        {
+                            _isWinDown = false;
+                            if (_shortcutExecuted)
+                            {
+                                _shortcutExecuted = false;
+                                OnWinKeyReleased?.Invoke();
+                                // Suppress Win key release so Start Menu does not open
                                 return (IntPtr)1;
+                            }
+                        }
+                    }
 
-                            case Win32Api.VK_BACK: // Backspace
-                            case Win32Api.VK_R:    // R
-                                _shortcutExecuted = true;
-                                OnResetRequested?.Invoke();
-                                ForceReleaseWinKey();
-                                return (IntPtr)1;
-
-                            case Win32Api.VK_S: // S
-                                _shortcutExecuted = true;
-                                OnSaveRequested?.Invoke();
-                                ForceReleaseWinKey();
-                                return (IntPtr)1;
-
-                            case Win32Api.VK_ESCAPE: // Esc
-                                _shortcutExecuted = true;
-                                OnSwitchModeRequested?.Invoke();
-                                ForceReleaseWinKey();
-                                return (IntPtr)1;
-
-                            case Win32Api.VK_N: // N (New Timer)
-                                _shortcutExecuted = true;
-                                OnNewInstanceRequested?.Invoke();
-                                ForceReleaseWinKey();
-                                return (IntPtr)1;
-
-                            case Win32Api.VK_W:      // W (Close Timer)
-                            case Win32Api.VK_DELETE: // Delete
-                                _shortcutExecuted = true;
-                                OnCloseInstanceRequested?.Invoke();
-                                ForceReleaseWinKey();
-                                return (IntPtr)1;
-
-                            case Win32Api.VK_UP: // Up arrow
-                                if (!_isUpHeld)
-                                {
-                                    _isUpHeld = true;
+                    // Hotkey combinations with Win key
+                    if (_isWinDown)
+                    {
+                        if (isKeyDown)
+                        {
+                            switch (vk)
+                            {
+                                case Win32Api.VK_OEM_3: // ` or ~
                                     _shortcutExecuted = true;
-                                    OnAdjustUpStart?.Invoke();
-                                }
-                                return (IntPtr)1;
+                                    bool isCtrl = (Win32Api.GetAsyncKeyState(Win32Api.VK_CONTROL) & 0x8000) != 0;
+                                    if (isCtrl)
+                                    {
+                                        OnIntervalToggleRequested?.Invoke();
+                                    }
+                                    else
+                                    {
+                                        OnToggleRequested?.Invoke();
+                                    }
+                                    ForceReleaseWinKey();
+                                    return (IntPtr)1;
 
-                            case Win32Api.VK_DOWN: // Down arrow
-                                if (!_isDownHeld)
-                                {
-                                    _isDownHeld = true;
+                                case Win32Api.VK_SPACE:  // Space
                                     _shortcutExecuted = true;
-                                    OnAdjustDownStart?.Invoke();
-                                }
+                                    OnPauseToggleRequested?.Invoke();
+                                    ForceReleaseWinKey();
+                                    return (IntPtr)1;
+
+                                case Win32Api.VK_BACK: // Backspace
+                                case Win32Api.VK_R:    // R
+                                    _shortcutExecuted = true;
+                                    OnResetRequested?.Invoke();
+                                    ForceReleaseWinKey();
+                                    return (IntPtr)1;
+
+                                case Win32Api.VK_S: // S
+                                    _shortcutExecuted = true;
+                                    OnSaveRequested?.Invoke();
+                                    ForceReleaseWinKey();
+                                    return (IntPtr)1;
+
+                                case Win32Api.VK_ESCAPE: // Esc
+                                    _shortcutExecuted = true;
+                                    OnSwitchModeRequested?.Invoke();
+                                    ForceReleaseWinKey();
+                                    return (IntPtr)1;
+
+                                case Win32Api.VK_N: // N (New Timer)
+                                    _shortcutExecuted = true;
+                                    OnNewInstanceRequested?.Invoke();
+                                    ForceReleaseWinKey();
+                                    return (IntPtr)1;
+
+                                case Win32Api.VK_W:      // W (Close Timer)
+                                case Win32Api.VK_DELETE: // Delete
+                                    _shortcutExecuted = true;
+                                    OnCloseInstanceRequested?.Invoke();
+                                    ForceReleaseWinKey();
+                                    return (IntPtr)1;
+
+                                case Win32Api.VK_UP: // Up arrow
+                                    if (!_isUpHeld)
+                                    {
+                                        _isUpHeld = true;
+                                        _shortcutExecuted = true;
+                                        OnAdjustUpStart?.Invoke();
+                                    }
+                                    return (IntPtr)1;
+
+                                case Win32Api.VK_DOWN: // Down arrow
+                                    if (!_isDownHeld)
+                                    {
+                                        _isDownHeld = true;
+                                        _shortcutExecuted = true;
+                                        OnAdjustDownStart?.Invoke();
+                                    }
+                                    return (IntPtr)1;
+                            }
+                        }
+                        else if (isKeyUp)
+                        {
+                            if (vk == Win32Api.VK_UP && _isUpHeld)
+                            {
+                                _isUpHeld = false;
+                                OnAdjustUpStop?.Invoke();
+                                ForceReleaseWinKey();
                                 return (IntPtr)1;
+                            }
+                            else if (vk == Win32Api.VK_DOWN && _isDownHeld)
+                            {
+                                _isDownHeld = false;
+                                OnAdjustDownStop?.Invoke();
+                                ForceReleaseWinKey();
+                                return (IntPtr)1;
+                            }
                         }
                     }
-                    else if (isKeyUp)
+                    else
                     {
-                        if (vk == Win32Api.VK_UP && _isUpHeld)
+                        // Clean up release flags if Win was released first
+                        if (isKeyUp)
                         {
-                            _isUpHeld = false;
-                            OnAdjustUpStop?.Invoke();
-                            ForceReleaseWinKey();
-                            return (IntPtr)1;
-                        }
-                        else if (vk == Win32Api.VK_DOWN && _isDownHeld)
-                        {
-                            _isDownHeld = false;
-                            OnAdjustDownStop?.Invoke();
-                            ForceReleaseWinKey();
-                            return (IntPtr)1;
+                            if (vk == Win32Api.VK_UP && _isUpHeld)
+                            {
+                                _isUpHeld = false;
+                                OnAdjustUpStop?.Invoke();
+                                ForceReleaseWinKey();
+                            }
+                            else if (vk == Win32Api.VK_DOWN && _isDownHeld)
+                            {
+                                _isDownHeld = false;
+                                OnAdjustDownStop?.Invoke();
+                                ForceReleaseWinKey();
+                            }
                         }
                     }
                 }
-                else
-                {
-                    // Clean up release flags if Win was released first
-                    if (isKeyUp)
-                    {
-                        if (vk == Win32Api.VK_UP && _isUpHeld)
-                        {
-                            _isUpHeld = false;
-                            OnAdjustUpStop?.Invoke();
-                            ForceReleaseWinKey();
-                        }
-                        else if (vk == Win32Api.VK_DOWN && _isDownHeld)
-                        {
-                            _isDownHeld = false;
-                            OnAdjustDownStop?.Invoke();
-                            ForceReleaseWinKey();
-                        }
-                    }
-                }
+                catch { }
             }
 
             return Win32Api.CallNextHookEx(_hookId, nCode, wParam, lParam);
