@@ -67,6 +67,14 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="TimerInputWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="IntervalTimerWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -79,9 +87,19 @@
       <DependentUpon>AlarmWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="TimerInputWindow.xaml.cs">
+      <DependentUpon>TimerInputWindow.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="IntervalTimerWindow.xaml.cs">
+      <DependentUpon>IntervalTimerWindow.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Core\Win32Api.cs" />
     <Compile Include="Core\LowLevelKeyboardHook.cs" />
+    <Compile Include="Core\LowLevelMouseHook.cs" />
     <Compile Include="Core\TimeBombManager.cs" />
+    <Compile Include="Core\IntervalTimerManager.cs" />
     <Compile Include="Core\SoundManager.cs" />
     <Compile Include="Core\SettingsManager.cs" />
     <Compile Include="Core\GamepadManager.cs" />

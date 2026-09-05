@@ -14,6 +14,7 @@ namespace TimeBomb.Core
         private bool _isDownHeld = false;
 
         public event Action OnToggleRequested;
+        public event Action OnIntervalToggleRequested;
         public event Action OnPauseToggleRequested;
         public event Action OnResetRequested;
         public event Action OnSaveRequested;
@@ -75,6 +76,17 @@ namespace TimeBomb.Core
                     }
                 }
 
+                // Safety check: verify if Windows key is physically held down (skip check while holding Up/Down)
+                if (_isWinDown && !_isUpHeld && !_isDownHeld && vk != Win32Api.VK_LWIN && vk != Win32Api.VK_RWIN)
+                {
+                    bool isWinPhysicallyDown = (Win32Api.GetAsyncKeyState(Win32Api.VK_LWIN) & 0x8000) != 0
+                                            || (Win32Api.GetAsyncKeyState(Win32Api.VK_RWIN) & 0x8000) != 0;
+                    if (!isWinPhysicallyDown)
+                    {
+                        _isWinDown = false;
+                    }
+                }
+
                 // Track Windows key (Left or Right)
                 if (vk == Win32Api.VK_LWIN || vk == Win32Api.VK_RWIN)
                 {
@@ -104,40 +116,54 @@ namespace TimeBomb.Core
                         {
                             case Win32Api.VK_OEM_3: // ` or ~
                                 _shortcutExecuted = true;
-                                OnToggleRequested?.Invoke();
+                                bool isCtrl = (Win32Api.GetAsyncKeyState(Win32Api.VK_CONTROL) & 0x8000) != 0;
+                                if (isCtrl)
+                                {
+                                    OnIntervalToggleRequested?.Invoke();
+                                }
+                                else
+                                {
+                                    OnToggleRequested?.Invoke();
+                                }
+                                ForceReleaseWinKey();
                                 return (IntPtr)1;
 
-                            case Win32Api.VK_RETURN: // Enter
                             case Win32Api.VK_SPACE:  // Space
                                 _shortcutExecuted = true;
                                 OnPauseToggleRequested?.Invoke();
+                                ForceReleaseWinKey();
                                 return (IntPtr)1;
 
                             case Win32Api.VK_BACK: // Backspace
                             case Win32Api.VK_R:    // R
                                 _shortcutExecuted = true;
                                 OnResetRequested?.Invoke();
+                                ForceReleaseWinKey();
                                 return (IntPtr)1;
 
                             case Win32Api.VK_S: // S
                                 _shortcutExecuted = true;
                                 OnSaveRequested?.Invoke();
+                                ForceReleaseWinKey();
                                 return (IntPtr)1;
 
                             case Win32Api.VK_ESCAPE: // Esc
                                 _shortcutExecuted = true;
                                 OnSwitchModeRequested?.Invoke();
+                                ForceReleaseWinKey();
                                 return (IntPtr)1;
 
                             case Win32Api.VK_N: // N (New Timer)
                                 _shortcutExecuted = true;
                                 OnNewInstanceRequested?.Invoke();
+                                ForceReleaseWinKey();
                                 return (IntPtr)1;
 
                             case Win32Api.VK_W:      // W (Close Timer)
                             case Win32Api.VK_DELETE: // Delete
                                 _shortcutExecuted = true;
                                 OnCloseInstanceRequested?.Invoke();
+                                ForceReleaseWinKey();
                                 return (IntPtr)1;
 
                             case Win32Api.VK_UP: // Up arrow
@@ -165,12 +191,14 @@ namespace TimeBomb.Core
                         {
                             _isUpHeld = false;
                             OnAdjustUpStop?.Invoke();
+                            ForceReleaseWinKey();
                             return (IntPtr)1;
                         }
                         else if (vk == Win32Api.VK_DOWN && _isDownHeld)
                         {
                             _isDownHeld = false;
                             OnAdjustDownStop?.Invoke();
+                            ForceReleaseWinKey();
                             return (IntPtr)1;
                         }
                     }
@@ -184,17 +212,34 @@ namespace TimeBomb.Core
                         {
                             _isUpHeld = false;
                             OnAdjustUpStop?.Invoke();
+                            ForceReleaseWinKey();
                         }
                         else if (vk == Win32Api.VK_DOWN && _isDownHeld)
                         {
                             _isDownHeld = false;
                             OnAdjustDownStop?.Invoke();
+                            ForceReleaseWinKey();
                         }
                     }
                 }
             }
 
             return Win32Api.CallNextHookEx(_hookId, nCode, wParam, lParam);
+        }
+
+        private void ForceReleaseWinKey()
+        {
+            _isWinDown = false;
+            _shortcutExecuted = false;
+
+            try
+            {
+                // Send dummy unassigned key 0xE8 to tell Windows OS a key was pressed with Win,
+                // suppressing Start Menu popup without corrupting physical Win key state.
+                Win32Api.keybd_event(0xE8, 0, 0, UIntPtr.Zero);
+                Win32Api.keybd_event(0xE8, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
+            }
+            catch { }
         }
 
         public void Dispose()

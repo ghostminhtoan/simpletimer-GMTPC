@@ -6,15 +6,27 @@ namespace TimeBomb.Core
     public static class Win32Api
     {
         public const int WH_KEYBOARD_LL = 13;
+        public const int WH_MOUSE_LL = 14;
         public const int WM_KEYDOWN = 0x0100;
         public const int WM_KEYUP = 0x0101;
         public const int WM_SYSKEYDOWN = 0x0104;
         public const int WM_SYSKEYUP = 0x0105;
+        public const int WM_RBUTTONDOWN = 0x0204;
+        public const int WM_RBUTTONUP = 0x0205;
+        public const int WM_MBUTTONDOWN = 0x0207;
+        public const int WM_MBUTTONUP = 0x0208;
 
         public const int GWL_EXSTYLE = -20;
         public const int WS_EX_TOOLWINDOW = 0x00000080;
         public const int WS_EX_NOACTIVATE = 0x08000000;
+        public const int WS_EX_TRANSPARENT = 0x00000020;
 
+        public const uint SWP_NOSIZE = 0x0001;
+        public const uint SWP_NOMOVE = 0x0002;
+        public const uint SWP_NOZORDER = 0x0004;
+        public const uint SWP_FRAMECHANGED = 0x0020;
+
+        public const int VK_CONTROL = 0x11;
         public const int VK_LWIN = 0x5B;
         public const int VK_RWIN = 0x5C;
         public const int VK_OEM_3 = 0xC0;    // `~ key
@@ -41,7 +53,19 @@ namespace TimeBomb.Core
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool GetCursorPos(out POINT lpPoint);
 
+        [DllImport("user32.dll")]
+        public static extern short GetKeyState(int vKey);
+
+        public const uint KEYEVENTF_KEYUP = 0x0002;
+
+        [DllImport("user32.dll")]
+        public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+
+        [DllImport("user32.dll")]
+        public static extern short GetAsyncKeyState(int vKey);
+
         public delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+        public delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);
 
         [StructLayout(LayoutKind.Sequential)]
         public struct KBDLLHOOKSTRUCT
@@ -53,8 +77,21 @@ namespace TimeBomb.Core
             public IntPtr dwExtraInfo;
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MSLLHOOKSTRUCT
+        {
+            public POINT pt;
+            public uint mouseData;
+            public uint flags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
+
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelMouseProc lpfn, IntPtr hMod, uint dwThreadId);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -121,6 +158,21 @@ namespace TimeBomb.Core
             exStyle |= WS_EX_TOOLWINDOW;
             exStyle |= WS_EX_NOACTIVATE;
             SetWindowLong(hWnd, GWL_EXSTYLE, exStyle);
+        }
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+        public static void SetClickThrough(IntPtr hWnd, bool enable)
+        {
+            int exStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
+            if (enable)
+                exStyle |= WS_EX_TRANSPARENT;
+            else
+                exStyle &= ~WS_EX_TRANSPARENT;
+            SetWindowLong(hWnd, GWL_EXSTYLE, exStyle);
+            SetWindowPos(hWnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
         }
     }
 }

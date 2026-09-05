@@ -27,6 +27,8 @@ namespace TimeBomb.Core
         public bool IsPaused { get; private set; } = false;
         public bool IsAlarmActive { get; private set; } = false;
         private bool IsWinKeyHeld => _hook != null && _hook.IsWinKeyHeld;
+        public int TimerMinutes => _timerMinutes;
+        public int TimerSeconds => _timerSeconds;
 
         // Timer mode state
         private int _timerMinutes = 3;
@@ -74,9 +76,10 @@ namespace TimeBomb.Core
                 Mode = savedMode;
             }
             _lastResetMinutes = settings.LastSetMinutes;
+            _lastResetSeconds = settings.LastSetSeconds;
             _timerMinutes = _lastResetMinutes;
-            _timerSeconds = 0;
-            _totalTimerSeconds = _timerMinutes * 60;
+            _timerSeconds = _lastResetSeconds;
+            _totalTimerSeconds = _timerMinutes * 60 + _timerSeconds;
             _timerStartTime = DateTime.Now;
             _targetEndTime = _timerStartTime.AddSeconds(_totalTimerSeconds);
             _pausedRemainingSeconds = _totalTimerSeconds;
@@ -192,9 +195,12 @@ namespace TimeBomb.Core
 
             if (Mode == AppMode.Timer)
             {
-                // Reset to default 3:00 when timer is closed
-                _lastResetMinutes = 3;
-                _lastResetSeconds = 0;
+                // Restore to user's saved default countdown mark when timer is closed/hidden
+                _lastResetMinutes = _settings.LastSetMinutes;
+                _lastResetSeconds = _settings.LastSetSeconds;
+                _timerMinutes = _lastResetMinutes;
+                _timerSeconds = _lastResetSeconds;
+                _totalTimerSeconds = _timerMinutes * 60 + _timerSeconds;
             }
 
             OnVisibilityToggled?.Invoke(false);
@@ -299,12 +305,57 @@ namespace TimeBomb.Core
         {
             if (IsVisible && Mode == AppMode.Timer)
             {
-                _lastResetMinutes = _timerMinutes;
-                _lastResetSeconds = _timerSeconds;
-                _settings.LastSetMinutes = _lastResetMinutes;
-                _settings.Save();
-                _sound.Play("adjust.wav");
+                int saveMins;
+                int saveSecs;
+                if (IsRunning && !IsPaused)
+                {
+                    saveMins = _lastResetMinutes;
+                    saveSecs = _lastResetSeconds;
+                }
+                else
+                {
+                    saveMins = _timerMinutes;
+                    saveSecs = _timerSeconds;
+                }
+
+                int total = saveMins * 60 + saveSecs;
+                if (total > 0)
+                {
+                    _lastResetMinutes = saveMins;
+                    _lastResetSeconds = saveSecs;
+                    _settings.LastSetMinutes = _lastResetMinutes;
+                    _settings.LastSetSeconds = _lastResetSeconds;
+                    _settings.Save();
+                    _sound.Play("adjust.wav");
+                }
             }
+        }
+
+        public void SetTimer(int minutes, int seconds)
+        {
+            if (Mode != AppMode.Timer) return;
+            int total = minutes * 60 + seconds;
+            if (total < 1) total = 1;
+            if (total > 999 * 60 + 59) total = 999 * 60 + 59;
+
+            _timerMinutes = total / 60;
+            _timerSeconds = total % 60;
+            _totalTimerSeconds = total;
+            _timerStartTime = DateTime.Now;
+            _targetEndTime = _timerStartTime.AddSeconds(_totalTimerSeconds);
+            _pausedRemainingSeconds = _totalTimerSeconds;
+            _lastResetMinutes = _timerMinutes;
+            _lastResetSeconds = _timerSeconds;
+
+            IsRunning = true;
+            IsPaused = false;
+            _isBelow10 = (_timerMinutes == 0 && _timerSeconds <= 10);
+            _blinkVisible = true;
+            _tickTimer.Start();
+            _blinkTimer.Start();
+
+            _sound.Play("adjust.wav");
+            UpdateDisplay();
         }
 
         public void SwitchMode()
@@ -335,8 +386,8 @@ namespace TimeBomb.Core
             {
                 Mode = AppMode.Timer;
                 _timerMinutes = _lastResetMinutes;
-                _timerSeconds = 0;
-                _totalTimerSeconds = _timerMinutes * 60;
+                _timerSeconds = _lastResetSeconds;
+                _totalTimerSeconds = _timerMinutes * 60 + _timerSeconds;
                 _timerStartTime = DateTime.Now;
                 _targetEndTime = _timerStartTime.AddSeconds(_totalTimerSeconds);
                 _pausedRemainingSeconds = _totalTimerSeconds;

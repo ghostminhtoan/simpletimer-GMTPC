@@ -1,0 +1,124 @@
+<Window x:Class="TimeBomb.TimerInputWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Set Countdown"
+        Width="220" Height="106"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        WindowStartupLocation="Manual">
+    <Window.Resources>
+        <DropShadowEffect x:Key="WindowGlow" Color="#23FF23" BlurRadius="14" ShadowDepth="0" Opacity="0.5"/>
+        <DropShadowEffect x:Key="TextGlow" Color="#23FF23" BlurRadius="8" ShadowDepth="0" Opacity="0.7"/>
+
+        <Style x:Key="CyberpunkButton" TargetType="Button">
+            <Setter Property="Background" Value="#2B2B36"/>
+            <Setter Property="Foreground" Value="#23FF23"/>
+            <Setter Property="BorderBrush" Value="#4423FF23"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#383848"/>
+                                <Setter TargetName="btnBorder" Property="BorderBrush" Value="#66FF66"/>
+                                <Setter Property="Foreground" Value="#66FF66"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#23FF23"/>
+                                <Setter Property="Foreground" Value="#1E1E24"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border Background="#F21E1E24"
+            BorderBrush="#23FF23"
+            BorderThickness="1.5"
+            CornerRadius="8"
+            Effect="{StaticResource WindowGlow}"
+            SnapsToDevicePixels="True">
+        <Grid Margin="10,8,10,8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Title -->
+            <TextBlock Grid.Row="0"
+                       Text="SET COUNTDOWN (MM:SS)"
+                       FontFamily="Segoe UI, Arial"
+                       FontSize="10"
+                       FontWeight="Bold"
+                       Foreground="#A0FFA0"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,4"/>
+
+            <!-- Input Box -->
+            <TextBox x:Name="TxtInput"
+                     Grid.Row="1"
+                     Height="36"
+                     Background="#262630"
+                     Foreground="#23FF23"
+                     BorderBrush="#4423FF23"
+                     BorderThickness="1"
+                     FontFamily="pack://application:,,,/Resources/Fonts/#DS-Digital, Consolas, Courier New"
+                     FontSize="24"
+                     FontWeight="Bold"
+                     HorizontalContentAlignment="Center"
+                     VerticalContentAlignment="Center"
+                     Effect="{StaticResource TextGlow}"
+                     CaretBrush="#23FF23"
+                     SnapsToDevicePixels="True"
+                     KeyDown="TxtInput_KeyDown"/>
+
+            <!-- Action / Hint Row -->
+            <Grid Grid.Row="2" Margin="0,5,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Text="Enter: Set • Esc: Cancel"
+                           FontFamily="Segoe UI, Arial"
+                           FontSize="9"
+                           Foreground="#70A070"
+                           VerticalAlignment="Center"/>
+
+                <Button Grid.Column="1"
+                        Content="SET"
+                        Width="42" Height="20"
+                        Style="{StaticResource CyberpunkButton}"
+                        Margin="0,0,4,0"
+                        Click="BtnSet_Click"/>
+
+                <Button Grid.Column="2"
+                        Content="ESC"
+                        Width="42" Height="20"
+                        Style="{StaticResource CyberpunkButton}"
+                        Click="BtnCancel_Click"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

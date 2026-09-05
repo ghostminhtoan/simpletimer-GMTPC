@@ -14,6 +14,145 @@
         <!-- Glow Effect for Normal State -->
         <DropShadowEffect x:Key="NormalGlow" Color="#23FF23" BlurRadius="10" ShadowDepth="0" Opacity="0.5"/>
         <DropShadowEffect x:Key="RedGlow" Color="#FF2323" BlurRadius="12" ShadowDepth="0" Opacity="0.75"/>
+
+        <!-- Cyberpunk Context Menu Style (Fixes white icon strip) -->
+        <Style TargetType="ContextMenu">
+            <Setter Property="Background" Value="#1E1E24"/>
+            <Setter Property="BorderBrush" Value="#23FF23"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="#23FF23"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="4">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#000000" BlurRadius="12" ShadowDepth="3" Opacity="0.8"/>
+                            </Border.Effect>
+                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="MenuItem">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#23FF23"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="10,5,10,5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="Border" 
+                                Background="{TemplateBinding Background}" 
+                                CornerRadius="4" 
+                                Padding="{TemplateBinding Padding}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter Grid.Column="0" ContentSource="Header" RecognizesAccessKey="True" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="SubmenuArrow" Grid.Column="1" Text=" ▶" FontSize="9" Foreground="#80FFA0" VerticalAlignment="Center" Visibility="Collapsed"/>
+                                <Popup x:Name="PART_Popup" 
+                                       IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}" 
+                                       Placement="Right" 
+                                       Focusable="False" 
+                                       AllowsTransparency="True">
+                                    <Border Background="#1E1E24" BorderBrush="#23FF23" BorderThickness="1" CornerRadius="6" Padding="4">
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="#000000" BlurRadius="12" ShadowDepth="3" Opacity="0.8"/>
+                                        </Border.Effect>
+                                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                                    </Border>
+                                </Popup>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="HasItems" Value="True">
+                                <Setter TargetName="SubmenuArrow" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#3323FF23"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="#668866"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="Separator">
+            <Setter Property="Background" Value="#3323FF23"/>
+            <Setter Property="Margin" Value="4,3,4,3"/>
+            <Setter Property="Height" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Separator">
+                        <Border Background="#3323FF23" Height="1" Margin="4,3,4,3"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Cyberpunk Slider Style -->
+        <Style x:Key="CyberpunkSlider" TargetType="Slider">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid VerticalAlignment="Center">
+                            <!-- Track line background -->
+                            <Border Height="4" Background="#353540" CornerRadius="2" VerticalAlignment="Center"/>
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="Slider.DecreaseLarge">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate>
+                                                <Border Height="4" Background="#23FF23" CornerRadius="2" VerticalAlignment="Center"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb>
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Ellipse Width="14" Height="14" Fill="#23FF23" Stroke="#1E1E24" StrokeThickness="1.5">
+                                                    <Ellipse.Effect>
+                                                        <DropShadowEffect Color="#23FF23" BlurRadius="6" ShadowDepth="0" Opacity="0.8"/>
+                                                    </Ellipse.Effect>
+                                                </Ellipse>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="Slider.IncreaseLarge">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate>
+                                                <Border Height="4" Background="Transparent" VerticalAlignment="Center"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Border x:Name="RootBorder" 
@@ -47,6 +186,26 @@
                            Text="#1"
                            FontFamily="Segoe UI, Arial"
                            FontSize="9"
+                           FontWeight="Bold"
+                           Foreground="#80FFA0"/>
+            </Border>
+
+            <!-- Ghost / Click Through Indicator -->
+            <Border x:Name="GhostBadge"
+                    Grid.Row="0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Margin="0,2,2,0"
+                    Background="#3323FF23"
+                    BorderBrush="#6623FF23"
+                    BorderThickness="1"
+                    CornerRadius="3"
+                    Padding="3,1,3,1"
+                    Visibility="Collapsed"
+                    ToolTip="Click Through đang BẬT. Nhấn Ctrl + Chuột giữa vào HUD hoặc dùng Taskbar để tắt.">
+                <TextBlock Text="GHOST"
+                           FontFamily="Segoe UI, Arial"
+                           FontSize="8"
                            FontWeight="Bold"
                            Foreground="#80FFA0"/>
             </Border>

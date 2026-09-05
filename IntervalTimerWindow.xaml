@@ -1,0 +1,241 @@
+<Window x:Class="TimeBomb.IntervalTimerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Interval Timer" 
+        Height="360" Width="320"
+        WindowStyle="None" 
+        AllowsTransparency="True" 
+        Background="Transparent"
+        Topmost="True" 
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        WindowStartupLocation="Manual">
+
+    <Window.Resources>
+        <FontFamily x:Key="DigitalFont">pack://application:,,,/Resources/Fonts/#DS-Digital</FontFamily>
+        
+        <DropShadowEffect x:Key="NormalGlow" Color="#23FF23" BlurRadius="12" ShadowDepth="0" Opacity="0.8"/>
+        <DropShadowEffect x:Key="YellowGlow" Color="#FFCC00" BlurRadius="12" ShadowDepth="0" Opacity="0.8"/>
+        <DropShadowEffect x:Key="OrangeGlow" Color="#FF9900" BlurRadius="12" ShadowDepth="0" Opacity="0.8"/>
+        <DropShadowEffect x:Key="RedGlow" Color="#FF2323" BlurRadius="12" ShadowDepth="0" Opacity="0.9"/>
+        <DropShadowEffect x:Key="WindowShadow" Color="#000000" BlurRadius="16" ShadowDepth="4" Opacity="0.6"/>
+
+        <Style x:Key="CyberButton" TargetType="Button">
+            <Setter Property="Background" Value="#3323FF23"/>
+            <Setter Property="Foreground" Value="#23FF23"/>
+            <Setter Property="BorderBrush" Value="#23FF23"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#5523FF23"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#7723FF23"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CyberRedButton" TargetType="Button" BasedOn="{StaticResource CyberButton}">
+            <Setter Property="Background" Value="#33FF2323"/>
+            <Setter Property="Foreground" Value="#FF2323"/>
+            <Setter Property="BorderBrush" Value="#FF2323"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#55FF2323"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#77FF2323"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="CyberInput" TargetType="TextBox">
+            <Setter Property="Background" Value="#221E1E24"/>
+            <Setter Property="Foreground" Value="#23FF23"/>
+            <Setter Property="BorderBrush" Value="#4423FF23"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="4,2"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="10">
+        <Border x:Name="RootBorder" 
+                Background="#D81E1E22" 
+                BorderBrush="#AA23FF23" 
+                BorderThickness="1.5" 
+                CornerRadius="10" 
+                Effect="{StaticResource WindowShadow}">
+            <Grid Margin="12,10,12,12">
+                <Grid.RowDefinitions>
+                    <!-- Header -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- Digital Timer Readout -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- Status / Loop Info -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- Inputs Panel -->
+                    <RowDefinition Height="*"/>
+                    <!-- Action Buttons -->
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header Bar -->
+                <DockPanel Grid.Row="0" Margin="0,0,0,6">
+                    <TextBlock Text="INTERVAL TIMER" 
+                               FontSize="11" 
+                               FontWeight="Bold" 
+                               Foreground="#A0FFA0" 
+                               VerticalAlignment="Center"/>
+                    <Button x:Name="BtnClose" 
+                            Content="✕" 
+                            DockPanel.Dock="Right" 
+                            Width="22" Height="22" 
+                            Background="Transparent" 
+                            Foreground="#88AA88" 
+                            BorderThickness="0" 
+                            FontSize="12" 
+                            FontWeight="Bold" 
+                            Cursor="Hand" 
+                            Click="BtnClose_Click"/>
+                </DockPanel>
+
+                <!-- Main Time Display -->
+                <Grid Grid.Row="1" HorizontalAlignment="Center" Margin="0,2,0,2">
+                    <TextBlock x:Name="TxtMainTime" 
+                               Text="00:00" 
+                               FontFamily="{StaticResource DigitalFont}" 
+                               FontSize="56" 
+                               FontWeight="Bold" 
+                               Foreground="#23FF23" 
+                               Effect="{StaticResource NormalGlow}" 
+                               HorizontalAlignment="Center" 
+                               TextAlignment="Center"/>
+                </Grid>
+
+                <!-- Phase Badge & Loop Info -->
+                <StackPanel Grid.Row="2" HorizontalAlignment="Center" Margin="0,0,0,8">
+                    <Border x:Name="BadgePhase" 
+                            Background="#3323FF23" 
+                            BorderBrush="#23FF23" 
+                            BorderThickness="1" 
+                            CornerRadius="4" 
+                            Padding="10,2" 
+                            HorizontalAlignment="Center">
+                        <TextBlock x:Name="TxtPhaseTitle" 
+                                   Text="IDLE" 
+                                   FontSize="12" 
+                                   FontWeight="Bold" 
+                                   Foreground="#23FF23"/>
+                    </Border>
+                    <TextBlock x:Name="TxtLoopInfo" 
+                               Text="Loops: 3" 
+                               FontSize="11" 
+                               Foreground="#A0FFA0" 
+                               HorizontalAlignment="Center" 
+                               Margin="0,4,0,0"/>
+                    <TextBlock x:Name="TxtSubText" 
+                               Text="Set timing below and click Start" 
+                               FontSize="10" 
+                               Foreground="#88AA88" 
+                               HorizontalAlignment="Center" 
+                               Margin="0,2,0,0"/>
+                </StackPanel>
+
+                <!-- Config Inputs Panel -->
+                <Border Grid.Row="3" 
+                        Background="#251E1E28" 
+                        BorderBrush="#35353A" 
+                        BorderThickness="1" 
+                        CornerRadius="6" 
+                        Padding="8,6" 
+                        Margin="0,0,0,10">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Row 1: Prepare & End -->
+                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="4,2">
+                            <TextBlock Text="Prepare (sec)" FontSize="10" Foreground="#A0FFA0" Margin="0,0,0,2"/>
+                            <TextBox x:Name="TxtPrepare" Text="5" Style="{StaticResource CyberInput}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="4,2">
+                            <TextBlock Text="End (sec)" FontSize="10" Foreground="#A0FFA0" Margin="0,0,0,2"/>
+                            <TextBox x:Name="TxtEnd" Text="5" Style="{StaticResource CyberInput}"/>
+                        </StackPanel>
+
+                        <!-- Row 2: Work, Rest & Loops -->
+                        <Grid Grid.Row="1" Grid.ColumnSpan="2" Margin="0,6,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="4,0">
+                                <TextBlock Text="Work (sec)" FontSize="10" Foreground="#23FF23" FontWeight="Bold" Margin="0,0,0,2"/>
+                                <TextBox x:Name="TxtWork" Text="30" Style="{StaticResource CyberInput}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Margin="4,0">
+                                <TextBlock Text="Rest (sec)" FontSize="10" Foreground="#FF9900" FontWeight="Bold" Margin="0,0,0,2"/>
+                                <TextBox x:Name="TxtRest" Text="10" Style="{StaticResource CyberInput}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2" Margin="4,0">
+                                <TextBlock Text="Loops" FontSize="10" Foreground="#A0FFA0" FontWeight="Bold" Margin="0,0,0,2"/>
+                                <TextBox x:Name="TxtLoops" Text="3" Style="{StaticResource CyberInput}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- Action Buttons -->
+                <Grid Grid.Row="4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button x:Name="BtnStart" 
+                            Content="▶ START" 
+                            Grid.Column="0" 
+                            Style="{StaticResource CyberButton}" 
+                            Click="BtnStart_Click"/>
+
+                    <Button x:Name="BtnEnd" 
+                            Content="■ END / STOP" 
+                            Grid.Column="2" 
+                            Style="{StaticResource CyberRedButton}" 
+                            Click="BtnEnd_Click"/>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

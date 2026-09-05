@@ -83,8 +83,10 @@ namespace TimeBomb
         private NotifyIcon _notifyIcon;
         private SoundManager _soundManager;
         private LowLevelKeyboardHook _hook;
+        private LowLevelMouseHook _mouseHook;
         private GamepadManager _gamepadManager;
         private SettingsManager _baseSettings;
+        private IntervalTimerWindow _intervalWindow;
         private readonly List<TimerInstance> _instances = new List<TimerInstance>();
         private TimerInstance _activeInstance;
         private int _nextInstanceId = 1;
@@ -142,10 +144,12 @@ namespace TimeBomb
 
                 _soundManager = new SoundManager();
                 _hook = new LowLevelKeyboardHook();
+                _mouseHook = new LowLevelMouseHook();
                 _baseSettings = new SettingsManager(1);
                 _gamepadManager = new GamepadManager(_baseSettings);
 
                 WireHookEvents();
+                WireMouseHook();
                 WireGamepadEvents();
                 CreateTimerInstance();
                 SetupTrayIcon();
@@ -233,6 +237,9 @@ namespace TimeBomb
             {
                 ExitApplication();
             };
+
+            instance.Window.OnClickThroughChanged += (w, ct) => UpdateTrayIconMenu();
+            instance.Window.OnOpacityChanged += (w, op) => UpdateTrayIconMenu();
 
             _instances.Add(instance);
 
@@ -327,6 +334,7 @@ namespace TimeBomb
             };
 
             _hook.OnToggleRequested += ToggleAll;
+            _hook.OnIntervalToggleRequested += ToggleIntervalTimer;
 
             _hook.OnPauseToggleRequested += () =>
             {
@@ -468,15 +476,81 @@ namespace TimeBomb
             };
         }
 
+        private void WireMouseHook()
+        {
+            _mouseHook.OnMiddleClickCheck = (screenX, screenY) =>
+            {
+                // Check if Ctrl key is held down
+                bool isCtrlDown = (Win32Api.GetAsyncKeyState(Win32Api.VK_CONTROL) & 0x8000) != 0
+                               || (Win32Api.GetKeyState(Win32Api.VK_CONTROL) & 0x8000) != 0;
+                if (!isCtrlDown) return false;
+
+                bool suppress = false;
+                Dispatcher.Invoke(() =>
+                {
+                    TimerInstance hit = null;
+                    for (int i = _instances.Count - 1; i >= 0; i--)
+                    {
+                        var inst = _instances[i];
+                        if (inst.Window.IsVisible && inst.Window.IsClickThrough && inst.Window.IsPointInside(screenX, screenY))
+                        {
+                            hit = inst;
+                            break;
+                        }
+                    }
+
+                    if (hit != null)
+                    {
+                        hit.Window.SetClickThrough(false);
+                        _soundManager?.Play("adjust.wav");
+                        UpdateTrayIconMenu();
+                        suppress = true;
+                    }
+                });
+
+                return suppress;
+            };
+        }
+
+        private void ToggleIntervalTimer()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (_intervalWindow == null)
+                {
+                    _intervalWindow = new IntervalTimerWindow(_baseSettings, _soundManager);
+                }
+
+                if (_intervalWindow.IsVisible)
+                {
+                    _intervalWindow.Hide();
+                }
+                else
+                {
+                    _intervalWindow.Show();
+                    _intervalWindow.Activate();
+                }
+            });
+        }
+
         private void ToggleAll()
         {
             Dispatcher.Invoke(() =>
             {
                 bool anyVisible = _instances.Exists(i => i.Window.IsVisible);
-                foreach (var inst in _instances)
+                if (!anyVisible)
                 {
-                    if (anyVisible) inst.Manager.Stop();
-                    else inst.Manager.Start(playSound: false);
+                    foreach (var inst in _instances)
+                    {
+                        inst.Manager.Start(playSound: false);
+                    }
+                }
+                else
+                {
+                    foreach (var inst in _instances)
+                    {
+                        inst.Manager.Stop();
+                    }
                 }
             });
         }
@@ -524,11 +598,59 @@ namespace TimeBomb
             contextMenu.Items.Add(new ToolStripSeparator());
 
             contextMenu.Items.Add("New Timer (Win + N)", null, (s, ev) => CreateTimerInstance());
-            contextMenu.Items.Add("Show / Hide All (Win + `)", null, (s, ev) => ToggleAll());
+            contextMenu.Items.Add("Switch / Show Mode (Win + `)", null, (s, ev) => ToggleAll());
+            contextMenu.Items.Add("Interval Timer (Ctrl + Win + `)", null, (s, ev) => ToggleIntervalTimer());
             contextMenu.Items.Add("Pause / Resume Active (Win + Enter)", null, (s, ev) => GetTargetInstance()?.Manager.PauseToggle());
             contextMenu.Items.Add("Reset Active (Win + Backspace)", null, (s, ev) => GetTargetInstance()?.Manager.Reset());
             contextMenu.Items.Add("Switch Mode Active (Win + Esc)", null, (s, ev) => GetTargetInstance()?.Manager.SwitchMode());
             contextMenu.Items.Add(new ToolStripSeparator());
+
+            var activeInst = GetTargetInstance();
+            if (activeInst != null)
+            {
+                var ctItem = new ToolStripMenuItem("👻 Click Through (Bấm xuyên qua)");
+                ctItem.Checked = activeInst.Window.IsClickThrough;
+                ctItem.ToolTipText = "Khi bật, nhấn Ctrl + Chuột giữa vào HUD để tắt";
+                ctItem.Click += (s, ev) =>
+                {
+                    activeInst.Window.SetClickThrough(!activeInst.Window.IsClickThrough);
+                    UpdateTrayIconMenu();
+                };
+                contextMenu.Items.Add(ctItem);
+
+                var opHeader = new ToolStripMenuItem($"🔆 Opacity: {(int)(activeInst.Window.Opacity * 100)}%") { Enabled = false };
+                opHeader.Font = new System.Drawing.Font(opHeader.Font, System.Drawing.FontStyle.Bold);
+                contextMenu.Items.Add(opHeader);
+
+                var trackBar = new TrackBar
+                {
+                    Minimum = 20,
+                    Maximum = 100,
+                    Value = (int)(activeInst.Window.Opacity * 100),
+                    TickFrequency = 10,
+                    SmallChange = 5,
+                    LargeChange = 10,
+                    Width = 150,
+                    Height = 28,
+                    AutoSize = false
+                };
+
+                trackBar.Scroll += (s, ev) =>
+                {
+                    double newOp = trackBar.Value / 100.0;
+                    opHeader.Text = $"🔆 Opacity: {trackBar.Value}%";
+                    activeInst.Window.SetWindowOpacity(newOp);
+                };
+
+                var host = new ToolStripControlHost(trackBar)
+                {
+                    Width = 155,
+                    Height = 28,
+                    Margin = new Padding(12, 1, 12, 1)
+                };
+                contextMenu.Items.Add(host);
+                contextMenu.Items.Add(new ToolStripSeparator());
+            }
 
             if (_instances.Count > 0)
             {
@@ -597,6 +719,12 @@ namespace TimeBomb
             }
             _instances.Clear();
 
+            if (_intervalWindow != null)
+            {
+                try { _intervalWindow.Close(); } catch { }
+                _intervalWindow = null;
+            }
+
             if (_notifyIcon != null)
             {
                 _notifyIcon.Visible = false;
@@ -606,6 +734,8 @@ namespace TimeBomb
 
             _hook?.Dispose();
             _hook = null;
+            _mouseHook?.Dispose();
+            _mouseHook = null;
             _gamepadManager?.Dispose();
             _gamepadManager = null;
             _soundManager?.Dispose();

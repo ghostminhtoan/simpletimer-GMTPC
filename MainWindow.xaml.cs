@@ -28,12 +28,15 @@ namespace TimeBomb
 
         public int InstanceId { get; set; } = 1;
         public bool IsActiveInstance { get; private set; } = false;
+        public bool IsClickThrough { get; private set; } = false;
         public TimeBombManager Manager { get; set; }
 
         public event Action<MainWindow> OnActivatedByInteraction;
         public event Action OnRequestNewInstance;
         public event Action<MainWindow> OnRequestCloseInstance;
         public event Action OnRequestExitAll;
+        public event Action<MainWindow, bool> OnClickThroughChanged;
+        public event Action<MainWindow, double> OnOpacityChanged;
 
         public MainWindow(SettingsManager settings, int instanceId = 1)
         {
@@ -56,17 +59,53 @@ namespace TimeBomb
             MouseMove += OnMouseMove;
             MouseWheel += OnMouseWheel;
             MouseRightButtonUp += OnMouseRightButtonUp;
+            MouseUp += OnMouseUp;
         }
 
         private void OnSourceInitialized(object sender, EventArgs e)
         {
             IntPtr handle = new WindowInteropHelper(this).Handle;
             Win32Api.SetToolWindowAndNoActivate(handle);
+            if (IsClickThrough)
+            {
+                Win32Api.SetClickThrough(handle, true);
+            }
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
+            SetWindowOpacity(_settings.Opacity);
+            SetClickThrough(_settings.ClickThrough);
             ClampToScreen();
+        }
+
+        public void SetClickThrough(bool enable)
+        {
+            IsClickThrough = enable;
+            _settings.ClickThrough = enable;
+            _settings.Save();
+
+            IntPtr handle = new WindowInteropHelper(this).Handle;
+            if (handle != IntPtr.Zero)
+            {
+                Win32Api.SetClickThrough(handle, enable);
+            }
+
+            if (GhostBadge != null)
+            {
+                GhostBadge.Visibility = enable ? Visibility.Visible : Visibility.Collapsed;
+            }
+
+            OnClickThroughChanged?.Invoke(this, enable);
+        }
+
+        public void SetWindowOpacity(double val)
+        {
+            val = Math.Max(0.2, Math.Min(1.0, val));
+            Opacity = val;
+            _settings.Opacity = val;
+            _settings.Save();
+            OnOpacityChanged?.Invoke(this, val);
         }
 
         public void SetBadge(int id, bool visible)
@@ -184,6 +223,52 @@ namespace TimeBomb
             ShowContextMenu();
         }
 
+        private void OnMouseUp(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Middle)
+            {
+                OnActivatedByInteraction?.Invoke(this);
+                if (Manager != null && Manager.Mode == AppMode.Timer)
+                {
+                    OpenTimerInputDialog();
+                }
+            }
+        }
+
+        public void OpenTimerInputDialog()
+        {
+            if (Manager == null || Manager.Mode != AppMode.Timer) return;
+
+            int currentMins = Manager.TimerMinutes;
+            int currentSecs = Manager.TimerSeconds;
+
+            var inputWindow = new TimerInputWindow(currentMins, currentSecs);
+
+            double left = Left + (ActualWidth - inputWindow.Width) / 2;
+            double top = Top + (ActualHeight - inputWindow.Height) / 2;
+
+            try
+            {
+                var screen = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)Left, (int)Top));
+                var area = screen.WorkingArea;
+                if (left < area.Left) left = area.Left;
+                if (left + inputWindow.Width > area.Right) left = area.Right - inputWindow.Width;
+                if (top < area.Top) top = area.Top;
+                if (top + inputWindow.Height > area.Bottom) top = area.Bottom - inputWindow.Height;
+            }
+            catch { }
+
+            inputWindow.Left = left;
+            inputWindow.Top = top;
+
+            inputWindow.OnTimeConfirmed += (mins, secs) =>
+            {
+                Manager?.SetTimer(mins, secs);
+            };
+
+            inputWindow.Show();
+        }
+
         private void ShowContextMenu()
         {
             var menu = new System.Windows.Controls.ContextMenu
@@ -223,6 +308,89 @@ namespace TimeBomb
             var itemSave = new System.Windows.Controls.MenuItem { Header = "Save Countdown (Win + S)", Foreground = _greenBrush };
             itemSave.Click += (s, ev) => Manager?.SaveCountdown();
             menu.Items.Add(itemSave);
+
+            if (Manager?.Mode == AppMode.Timer)
+            {
+                var itemSet = new System.Windows.Controls.MenuItem { Header = "Set Countdown (Middle Click)", Foreground = _greenBrush };
+                itemSet.Click += (s, ev) => OpenTimerInputDialog();
+                menu.Items.Add(itemSet);
+            }
+
+            menu.Items.Add(new System.Windows.Controls.Separator());
+
+            // Click Through option
+            var itemClickThrough = new System.Windows.Controls.MenuItem
+            {
+                Header = IsClickThrough ? "✓ Click Through (Bấm xuyên qua: BẬT)" : "Click Through (Bấm xuyên qua)",
+                Foreground = _greenBrush,
+                ToolTip = "Khi bật, nhấn Ctrl + Chuột giữa vào HUD để tắt"
+            };
+            itemClickThrough.Click += (s, ev) => SetClickThrough(!IsClickThrough);
+            menu.Items.Add(itemClickThrough);
+
+            // Opacity Slider Card
+            var opacityCard = new System.Windows.Controls.Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(0x35, 0x30, 0x30, 0x3A)),
+                BorderBrush = new SolidColorBrush(Color.FromArgb(0x44, 0x23, 0xFF, 0x23)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(5),
+                Margin = new Thickness(6, 4, 6, 4),
+                Padding = new Thickness(8, 6, 8, 6),
+                Width = 200
+            };
+
+            var cardStack = new System.Windows.Controls.StackPanel();
+
+            var headerDock = new System.Windows.Controls.DockPanel { LastChildFill = false };
+            var lblTitle = new System.Windows.Controls.TextBlock
+            {
+                Text = "Opacity",
+                FontSize = 11,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(0xA0, 0xFF, 0xA0))
+            };
+            var lblValue = new System.Windows.Controls.TextBlock
+            {
+                Text = $"{(int)(Opacity * 100)}%",
+                FontSize = 11,
+                FontWeight = FontWeights.Bold,
+                Foreground = _greenBrush
+            };
+            System.Windows.Controls.DockPanel.SetDock(lblTitle, System.Windows.Controls.Dock.Left);
+            System.Windows.Controls.DockPanel.SetDock(lblValue, System.Windows.Controls.Dock.Right);
+            headerDock.Children.Add(lblTitle);
+            headerDock.Children.Add(lblValue);
+            cardStack.Children.Add(headerDock);
+
+            var slider = new System.Windows.Controls.Slider
+            {
+                Minimum = 20,
+                Maximum = 100,
+                Value = (int)(Opacity * 100),
+                SmallChange = 5,
+                LargeChange = 10,
+                TickFrequency = 5,
+                IsSnapToTickEnabled = true,
+                Margin = new Thickness(0, 5, 0, 2),
+                Cursor = System.Windows.Input.Cursors.Hand,
+                Style = (Style)Resources["CyberpunkSlider"]
+            };
+
+            slider.ValueChanged += (s, ev) =>
+            {
+                int val = (int)ev.NewValue;
+                lblValue.Text = $"{val}%";
+                SetWindowOpacity(val / 100.0);
+            };
+
+            opacityCard.PreviewMouseLeftButtonDown += (s, ev) => ev.Handled = false;
+            opacityCard.PreviewMouseRightButtonDown += (s, ev) => ev.Handled = true;
+
+            cardStack.Children.Add(slider);
+            opacityCard.Child = cardStack;
+
+            menu.Items.Add(opacityCard);
 
             menu.Items.Add(new System.Windows.Controls.Separator());
 
