@@ -66,7 +66,8 @@
             </Grid.RowDefinitions>
 
             <!-- Alarm Message -->
-            <TextBlock Grid.Row="0" 
+            <TextBlock x:Name="TxtAlarmMessage"
+                       Grid.Row="0" 
                        Text="Beep, Beep turn it off."
                        FontFamily="pack://application:,,,/Resources/Fonts/#DS-Digital, Segoe UI, Arial"
                        FontSize="20"

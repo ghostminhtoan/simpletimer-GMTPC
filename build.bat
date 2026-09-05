@@ -7,6 +7,7 @@ echo =======================================================
 
 :: 1. Terminate running instance if any
 taskkill /F /IM TimeBomb.exe >nul 2>&1
+powershell -Command "Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile -Command taskkill /F /IM TimeBomb.exe' -Wait" >nul 2>&1
 
 :: 2. Find MSBuild
 set "MSBUILD_PATH=C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe"

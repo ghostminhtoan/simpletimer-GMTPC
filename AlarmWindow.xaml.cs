@@ -9,11 +9,18 @@ namespace TimeBomb
     public partial class AlarmWindow : Window
     {
         private readonly TimeBombManager _manager;
+        public int InstanceId { get; set; } = 1;
 
-        public AlarmWindow(TimeBombManager manager)
+        public AlarmWindow(TimeBombManager manager, int instanceId = 1)
         {
             InitializeComponent();
             _manager = manager;
+            InstanceId = instanceId;
+
+            if (instanceId > 1)
+            {
+                TxtAlarmMessage.Text = $"Timer #{instanceId}: Beep, Beep turn it off.";
+            }
 
             SourceInitialized += OnSourceInitialized;
             PreviewKeyDown += OnPreviewKeyDown;

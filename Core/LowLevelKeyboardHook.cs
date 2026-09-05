@@ -18,6 +18,8 @@ namespace TimeBomb.Core
         public event Action OnResetRequested;
         public event Action OnSaveRequested;
         public event Action OnSwitchModeRequested;
+        public event Action OnNewInstanceRequested;
+        public event Action OnCloseInstanceRequested;
 
         public event Action OnAdjustUpStart;
         public event Action OnAdjustUpStop;
@@ -106,6 +108,16 @@ namespace TimeBomb.Core
                             case Win32Api.VK_ESCAPE: // Esc
                                 _shortcutExecuted = true;
                                 OnSwitchModeRequested?.Invoke();
+                                return (IntPtr)1;
+
+                            case Win32Api.VK_N: // N (New Timer)
+                                _shortcutExecuted = true;
+                                OnNewInstanceRequested?.Invoke();
+                                return (IntPtr)1;
+
+                            case Win32Api.VK_W: // W (Close Timer)
+                                _shortcutExecuted = true;
+                                OnCloseInstanceRequested?.Invoke();
                                 return (IntPtr)1;
 
                             case Win32Api.VK_UP: // Up arrow

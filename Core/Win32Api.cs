@@ -24,6 +24,19 @@ namespace TimeBomb.Core
         public const int VK_UP = 0x26;       // Arrow Up
         public const int VK_DOWN = 0x28;     // Arrow Down
         public const int VK_S = 0x53;        // S key
+        public const int VK_N = 0x4E;        // N key (New Timer)
+        public const int VK_W = 0x57;        // W key (Close Timer)
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct POINT
+        {
+            public int X;
+            public int Y;
+        }
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GetCursorPos(out POINT lpPoint);
 
         public delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
 

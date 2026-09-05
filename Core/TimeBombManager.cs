@@ -26,6 +26,7 @@ namespace TimeBomb.Core
         public bool IsRunning { get; private set; } = false;
         public bool IsPaused { get; private set; } = false;
         public bool IsAlarmActive { get; private set; } = false;
+        private bool IsWinKeyHeld => _hook != null && _hook.IsWinKeyHeld;
 
         // Timer mode state
         private int _timerMinutes = 3;
@@ -33,7 +34,9 @@ namespace TimeBomb.Core
         private int _lastResetMinutes = 3;
         private int _lastResetSeconds = 0;
         private DateTime _timerStartTime;
-        private double _totalTimerSeconds;
+        private DateTime _targetEndTime = DateTime.Now.AddMinutes(3);
+        private double _totalTimerSeconds = 180;
+        private double _pausedRemainingSeconds = 180;
         private bool _startedWithWinHeld = false;
         private bool _isBelow10 = false;
 
@@ -59,7 +62,7 @@ namespace TimeBomb.Core
         public event Action OnAlarmTriggered;
         public event Action OnAlarmDismissed;
 
-        public TimeBombManager(SoundManager sound, SettingsManager settings, LowLevelKeyboardHook hook)
+        public TimeBombManager(SoundManager sound, SettingsManager settings, LowLevelKeyboardHook hook, bool autoWireHook = false)
         {
             _sound = sound;
             _settings = settings;
@@ -73,6 +76,10 @@ namespace TimeBomb.Core
             _lastResetMinutes = settings.LastSetMinutes;
             _timerMinutes = _lastResetMinutes;
             _timerSeconds = 0;
+            _totalTimerSeconds = _timerMinutes * 60;
+            _timerStartTime = DateTime.Now;
+            _targetEndTime = _timerStartTime.AddSeconds(_totalTimerSeconds);
+            _pausedRemainingSeconds = _totalTimerSeconds;
 
             // Main high-precision tick timer (50ms)
             _tickTimer = new DispatcherTimer(DispatcherPriority.Render)
@@ -95,19 +102,22 @@ namespace TimeBomb.Core
             };
             _adjustTimer.Tick += OnAdjustTick;
 
-            // Connect hook events
-            _hook.OnToggleRequested += Toggle;
-            _hook.OnPauseToggleRequested += PauseToggle;
-            _hook.OnResetRequested += Reset;
-            _hook.OnSaveRequested += SaveCountdown;
-            _hook.OnSwitchModeRequested += SwitchMode;
+            // Connect hook events if requested
+            if (autoWireHook && _hook != null)
+            {
+                _hook.OnToggleRequested += Toggle;
+                _hook.OnPauseToggleRequested += PauseToggle;
+                _hook.OnResetRequested += Reset;
+                _hook.OnSaveRequested += SaveCountdown;
+                _hook.OnSwitchModeRequested += SwitchMode;
 
-            _hook.OnAdjustUpStart += AdjustUpStart;
-            _hook.OnAdjustUpStop += AdjustUpStop;
-            _hook.OnAdjustDownStart += AdjustDownStart;
-            _hook.OnAdjustDownStop += AdjustDownStop;
+                _hook.OnAdjustUpStart += AdjustUpStart;
+                _hook.OnAdjustUpStop += AdjustUpStop;
+                _hook.OnAdjustDownStart += AdjustDownStart;
+                _hook.OnAdjustDownStop += AdjustDownStop;
 
-            _hook.OnWinKeyReleased += OnWinKeyReleased;
+                _hook.OnWinKeyReleased += OnWinKeyReleased;
+            }
         }
 
         public void Toggle()
@@ -132,7 +142,7 @@ namespace TimeBomb.Core
         {
             IsVisible = true;
             IsPaused = false;
-            _startedWithWinHeld = _hook.IsWinKeyHeld;
+            _startedWithWinHeld = IsWinKeyHeld;
 
             if (Mode == AppMode.Timer)
             {
@@ -140,6 +150,8 @@ namespace TimeBomb.Core
                 _timerSeconds = _lastResetSeconds;
                 _totalTimerSeconds = _timerMinutes * 60 + _timerSeconds;
                 _timerStartTime = DateTime.Now;
+                _targetEndTime = _timerStartTime.AddSeconds(_totalTimerSeconds);
+                _pausedRemainingSeconds = _totalTimerSeconds;
                 _isBelow10 = false;
             }
             else if (Mode == AppMode.Stopwatch)
@@ -201,14 +213,15 @@ namespace TimeBomb.Core
 
                 if (Mode == AppMode.Timer)
                 {
-                    _totalTimerSeconds = _timerMinutes * 60 + _timerSeconds;
+                    _totalTimerSeconds = _pausedRemainingSeconds > 0 ? _pausedRemainingSeconds : (_timerMinutes * 60 + _timerSeconds);
                     _timerStartTime = DateTime.Now;
-                    _startedWithWinHeld = _hook.IsWinKeyHeld;
+                    _targetEndTime = _timerStartTime.AddSeconds(_totalTimerSeconds);
+                    _startedWithWinHeld = IsWinKeyHeld;
                 }
                 else if (Mode == AppMode.Stopwatch)
                 {
                     _stopwatchStartTime = DateTime.Now.AddSeconds(-_stopwatchElapsedSeconds);
-                    _startedWithWinHeld = _hook.IsWinKeyHeld;
+                    _startedWithWinHeld = IsWinKeyHeld;
                     _stopwatchFreshLaunch = false;
                 }
 
@@ -219,6 +232,10 @@ namespace TimeBomb.Core
                 // Pause
                 IsPaused = true;
                 IsRunning = false;
+                if (Mode == AppMode.Timer)
+                {
+                    _pausedRemainingSeconds = Math.Max(0, (_targetEndTime - DateTime.Now).TotalSeconds);
+                }
                 _sound.Play("pause.wav");
             }
 
@@ -250,6 +267,8 @@ namespace TimeBomb.Core
                 _timerSeconds = _lastResetSeconds;
                 _totalTimerSeconds = _timerMinutes * 60 + _timerSeconds;
                 _timerStartTime = DateTime.Now;
+                _targetEndTime = _timerStartTime.AddSeconds(_totalTimerSeconds);
+                _pausedRemainingSeconds = _totalTimerSeconds;
             }
             else if (Mode == AppMode.Stopwatch)
             {
@@ -259,7 +278,7 @@ namespace TimeBomb.Core
                 _stopwatchFreshLaunch = true;
             }
 
-            _startedWithWinHeld = _hook.IsWinKeyHeld;
+            _startedWithWinHeld = IsWinKeyHeld;
 
             if (wasPaused)
             {
@@ -317,6 +336,10 @@ namespace TimeBomb.Core
                 Mode = AppMode.Timer;
                 _timerMinutes = _lastResetMinutes;
                 _timerSeconds = 0;
+                _totalTimerSeconds = _timerMinutes * 60;
+                _timerStartTime = DateTime.Now;
+                _targetEndTime = _timerStartTime.AddSeconds(_totalTimerSeconds);
+                _pausedRemainingSeconds = _totalTimerSeconds;
                 _sound.Play("switch_timer.wav");
             }
 
@@ -329,7 +352,7 @@ namespace TimeBomb.Core
             }
         }
 
-        private void OnWinKeyReleased()
+        public void OnWinKeyReleased()
         {
             // Freezing release handling
             if (Mode == AppMode.Stopwatch)
@@ -347,14 +370,37 @@ namespace TimeBomb.Core
                 {
                     _totalTimerSeconds = _timerMinutes * 60 + _timerSeconds;
                     _timerStartTime = DateTime.Now;
+                    _targetEndTime = _timerStartTime.AddSeconds(_totalTimerSeconds);
+                    _pausedRemainingSeconds = _totalTimerSeconds;
                     IsRunning = true;
                     _startedWithWinHeld = false;
                 }
             }
         }
 
+        public void AdjustMinutes(int delta)
+        {
+            if (!IsVisible || IsPaused || Mode != AppMode.Timer) return;
+            int target = _timerMinutes + delta;
+            if (target < 1) target = 1;
+            if (target > 999) target = 999;
+            if (target != _timerMinutes)
+            {
+                _timerMinutes = target;
+                _timerSeconds = 0;
+                _totalTimerSeconds = _timerMinutes * 60;
+                _timerStartTime = DateTime.Now;
+                _targetEndTime = _timerStartTime.AddSeconds(_totalTimerSeconds);
+                _pausedRemainingSeconds = _totalTimerSeconds;
+                _lastResetMinutes = _timerMinutes;
+                _lastResetSeconds = 0;
+                _sound.Play("adjust.wav");
+                UpdateDisplay();
+            }
+        }
+
         #region Adjust Up / Down Acceleration
-        private void AdjustUpStart()
+        public void AdjustUpStart()
         {
             if (!IsVisible || IsPaused || Mode != AppMode.Timer) return;
 
@@ -366,6 +412,10 @@ namespace TimeBomb.Core
             if (_timerMinutes < 999)
             {
                 _timerMinutes++;
+                _totalTimerSeconds = _timerMinutes * 60;
+                _timerStartTime = DateTime.Now;
+                _targetEndTime = _timerStartTime.AddSeconds(_totalTimerSeconds);
+                _pausedRemainingSeconds = _totalTimerSeconds;
                 _sound.Play("adjust.wav");
                 UpdateDisplay();
             }
@@ -373,7 +423,7 @@ namespace TimeBomb.Core
             _adjustTimer.Start();
         }
 
-        private void AdjustUpStop()
+        public void AdjustUpStop()
         {
             if (!_adjustingUp) return;
             _adjustingUp = false;
@@ -382,10 +432,12 @@ namespace TimeBomb.Core
 
             _totalTimerSeconds = _timerMinutes * 60 + _timerSeconds;
             _timerStartTime = DateTime.Now;
+            _targetEndTime = _timerStartTime.AddSeconds(_totalTimerSeconds);
+            _pausedRemainingSeconds = _totalTimerSeconds;
             _lastResetMinutes = _timerMinutes;
             _lastResetSeconds = _timerSeconds;
 
-            if (_hook.IsWinKeyHeld)
+            if (_hook != null && _hook.IsWinKeyHeld)
             {
                 _startedWithWinHeld = true;
             }
@@ -396,7 +448,7 @@ namespace TimeBomb.Core
             }
         }
 
-        private void AdjustDownStart()
+        public void AdjustDownStart()
         {
             if (!IsVisible || IsPaused || Mode != AppMode.Timer) return;
 
@@ -411,6 +463,10 @@ namespace TimeBomb.Core
             if (_timerMinutes > 1)
             {
                 _timerMinutes--;
+                _totalTimerSeconds = _timerMinutes * 60;
+                _timerStartTime = DateTime.Now;
+                _targetEndTime = _timerStartTime.AddSeconds(_totalTimerSeconds);
+                _pausedRemainingSeconds = _totalTimerSeconds;
                 _sound.Play("adjust.wav");
                 UpdateDisplay();
             }
@@ -418,7 +474,7 @@ namespace TimeBomb.Core
             _adjustTimer.Start();
         }
 
-        private void AdjustDownStop()
+        public void AdjustDownStop()
         {
             if (!_adjustingDown) return;
             _adjustingDown = false;
@@ -427,10 +483,12 @@ namespace TimeBomb.Core
 
             _totalTimerSeconds = _timerMinutes * 60 + _timerSeconds;
             _timerStartTime = DateTime.Now;
+            _targetEndTime = _timerStartTime.AddSeconds(_totalTimerSeconds);
+            _pausedRemainingSeconds = _totalTimerSeconds;
             _lastResetMinutes = _timerMinutes;
             _lastResetSeconds = _timerSeconds;
 
-            if (_hook.IsWinKeyHeld)
+            if (_hook != null && _hook.IsWinKeyHeld)
             {
                 _startedWithWinHeld = true;
             }
@@ -464,6 +522,10 @@ namespace TimeBomb.Core
                     _timerMinutes++;
                     _timerSeconds = 0;
                     _lastAdjustTime = DateTime.Now;
+                    _totalTimerSeconds = _timerMinutes * 60;
+                    _timerStartTime = DateTime.Now;
+                    _targetEndTime = _timerStartTime.AddSeconds(_totalTimerSeconds);
+                    _pausedRemainingSeconds = _totalTimerSeconds;
                     UpdateDisplay();
                 }
                 else if (_adjustingDown && _timerMinutes > 1)
@@ -471,6 +533,10 @@ namespace TimeBomb.Core
                     _timerMinutes--;
                     _timerSeconds = 0;
                     _lastAdjustTime = DateTime.Now;
+                    _totalTimerSeconds = _timerMinutes * 60;
+                    _timerStartTime = DateTime.Now;
+                    _targetEndTime = _timerStartTime.AddSeconds(_totalTimerSeconds);
+                    _pausedRemainingSeconds = _totalTimerSeconds;
                     UpdateDisplay();
                 }
             }
@@ -506,11 +572,10 @@ namespace TimeBomb.Core
 
             if (IsPaused)
             {
-                UpdateDisplay();
                 return;
             }
 
-            bool isFrozen = (_adjustingUp || _adjustingDown || (_hook.IsWinKeyHeld && _startedWithWinHeld));
+            bool isFrozen = (_adjustingUp || _adjustingDown || (IsWinKeyHeld && _startedWithWinHeld));
             if (isFrozen)
             {
                 if (Mode == AppMode.Stopwatch && _stopwatchFreshLaunch)
@@ -523,8 +588,7 @@ namespace TimeBomb.Core
 
             if (Mode == AppMode.Timer)
             {
-                double elapsed = (DateTime.Now - _timerStartTime).TotalSeconds;
-                double remaining = Math.Max(0, _totalTimerSeconds - elapsed);
+                double remaining = Math.Max(0, (_targetEndTime - DateTime.Now).TotalSeconds);
 
                 if (remaining <= 0)
                 {
@@ -537,8 +601,9 @@ namespace TimeBomb.Core
                     return;
                 }
 
-                _timerMinutes = (int)(remaining / 60);
-                _timerSeconds = (int)(remaining % 60);
+                int totalRemainingSec = (int)Math.Ceiling(remaining);
+                _timerMinutes = totalRemainingSec / 60;
+                _timerSeconds = totalRemainingSec % 60;
 
                 _isBelow10 = (_timerMinutes == 0 && _timerSeconds <= 10);
             }
@@ -581,10 +646,7 @@ namespace TimeBomb.Core
             {
                 mainText = string.Format(_timerMinutes >= 100 ? "{0:D3}:{1:D2}" : "{0:D2}:{1:D2}", _timerMinutes, _timerSeconds);
                 prefixText = "Ends at:";
-
-                int totalSec = _timerMinutes * 60 + _timerSeconds;
-                DateTime endTime = DateTime.Now.AddSeconds(totalSec);
-                subText = endTime.ToString("HH:mm:ss");
+                subText = _targetEndTime.ToString("HH:mm:ss");
 
                 if (IsPaused)
                 {
@@ -626,6 +688,8 @@ namespace TimeBomb.Core
             _timerSeconds = _lastResetSeconds;
             _totalTimerSeconds = _timerMinutes * 60 + _timerSeconds;
             _timerStartTime = DateTime.Now;
+            _targetEndTime = _timerStartTime.AddSeconds(_totalTimerSeconds);
+            _pausedRemainingSeconds = _totalTimerSeconds;
 
             IsRunning = true;
             IsPaused = false;
