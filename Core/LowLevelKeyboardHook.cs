@@ -27,6 +27,9 @@ namespace TimeBomb.Core
         public event Action OnAdjustDownStop;
 
         public event Action OnWinKeyReleased;
+        public event Action OnDismissAlarmRequested;
+
+        public Func<bool> IsAlarmActive { get; set; }
 
         public bool IsWinKeyHeld => _isWinDown;
         public bool ShortcutExecuted => _shortcutExecuted;
@@ -39,12 +42,16 @@ namespace TimeBomb.Core
 
         private void InstallHook()
         {
-            using (Process curProcess = Process.GetCurrentProcess())
-            using (ProcessModule curModule = curProcess.MainModule)
+            try
             {
-                IntPtr moduleHandle = Win32Api.GetModuleHandle(curModule.ModuleName);
-                _hookId = Win32Api.SetWindowsHookEx(Win32Api.WH_KEYBOARD_LL, _proc, moduleHandle, 0);
+                using (Process curProcess = Process.GetCurrentProcess())
+                using (ProcessModule curModule = curProcess.MainModule)
+                {
+                    IntPtr moduleHandle = Win32Api.GetModuleHandle(curModule.ModuleName);
+                    _hookId = Win32Api.SetWindowsHookEx(Win32Api.WH_KEYBOARD_LL, _proc, moduleHandle, 0);
+                }
             }
+            catch { }
         }
 
         private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
@@ -57,6 +64,16 @@ namespace TimeBomb.Core
 
                 var hookStruct = (Win32Api.KBDLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(Win32Api.KBDLLHOOKSTRUCT));
                 uint vk = hookStruct.vkCode;
+
+                // 1. Alarm Active: Pressing ANY key on keyboard immediately dismisses the alarm
+                if (IsAlarmActive != null && IsAlarmActive())
+                {
+                    if (isKeyDown)
+                    {
+                        OnDismissAlarmRequested?.Invoke();
+                        return (IntPtr)1;
+                    }
+                }
 
                 // Track Windows key (Left or Right)
                 if (vk == Win32Api.VK_LWIN || vk == Win32Api.VK_RWIN)
@@ -91,11 +108,13 @@ namespace TimeBomb.Core
                                 return (IntPtr)1;
 
                             case Win32Api.VK_RETURN: // Enter
+                            case Win32Api.VK_SPACE:  // Space
                                 _shortcutExecuted = true;
                                 OnPauseToggleRequested?.Invoke();
                                 return (IntPtr)1;
 
                             case Win32Api.VK_BACK: // Backspace
+                            case Win32Api.VK_R:    // R
                                 _shortcutExecuted = true;
                                 OnResetRequested?.Invoke();
                                 return (IntPtr)1;
@@ -115,7 +134,8 @@ namespace TimeBomb.Core
                                 OnNewInstanceRequested?.Invoke();
                                 return (IntPtr)1;
 
-                            case Win32Api.VK_W: // W (Close Timer)
+                            case Win32Api.VK_W:      // W (Close Timer)
+                            case Win32Api.VK_DELETE: // Delete
                                 _shortcutExecuted = true;
                                 OnCloseInstanceRequested?.Invoke();
                                 return (IntPtr)1;

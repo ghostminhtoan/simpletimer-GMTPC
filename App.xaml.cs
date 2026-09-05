@@ -20,10 +20,10 @@ namespace TimeBomb
         public MainWindow Window { get; }
         public AlarmWindow Alarm { get; }
 
-        public TimerInstance(int id, SoundManager sound, LowLevelKeyboardHook hook)
+        public TimerInstance(int id, SoundManager sound, LowLevelKeyboardHook hook, GamepadManager gamepad = null, SettingsManager settings = null)
         {
             Id = id;
-            Settings = new SettingsManager(id);
+            Settings = settings ?? new SettingsManager(id);
             Manager = new TimeBombManager(sound, Settings, hook, autoWireHook: false);
             Window = new MainWindow(Settings, id) { Manager = Manager };
             Alarm = new AlarmWindow(Manager, id);
@@ -44,6 +44,7 @@ namespace TimeBomb
 
             Manager.OnAlarmTriggered += () =>
             {
+                gamepad?.StartAlarmVibration();
                 Window.Dispatcher.Invoke(() =>
                 {
                     Alarm.Show();
@@ -53,6 +54,7 @@ namespace TimeBomb
 
             Manager.OnAlarmDismissed += () =>
             {
+                gamepad?.StopAlarmVibration();
                 Window.Dispatcher.Invoke(() =>
                 {
                     Alarm.Hide();
@@ -81,6 +83,8 @@ namespace TimeBomb
         private NotifyIcon _notifyIcon;
         private SoundManager _soundManager;
         private LowLevelKeyboardHook _hook;
+        private GamepadManager _gamepadManager;
+        private SettingsManager _baseSettings;
         private readonly List<TimerInstance> _instances = new List<TimerInstance>();
         private TimerInstance _activeInstance;
         private int _nextInstanceId = 1;
@@ -138,8 +142,11 @@ namespace TimeBomb
 
                 _soundManager = new SoundManager();
                 _hook = new LowLevelKeyboardHook();
+                _baseSettings = new SettingsManager(1);
+                _gamepadManager = new GamepadManager(_baseSettings);
 
                 WireHookEvents();
+                WireGamepadEvents();
                 CreateTimerInstance();
                 SetupTrayIcon();
             }
@@ -169,7 +176,8 @@ namespace TimeBomb
         public TimerInstance CreateTimerInstance()
         {
             int id = _nextInstanceId++;
-            var instance = new TimerInstance(id, _soundManager, _hook);
+            SettingsManager instSettings = (id == 1 && _baseSettings != null) ? _baseSettings : new SettingsManager(id);
+            var instance = new TimerInstance(id, _soundManager, _hook, _gamepadManager, instSettings);
 
             // If there is already a previous instance, position the new instance nicely below it
             if (_instances.Count > 0)
@@ -303,6 +311,21 @@ namespace TimeBomb
 
         private void WireHookEvents()
         {
+            _hook.IsAlarmActive = () => _instances.Exists(i => i.Manager.IsAlarmActive);
+            _hook.OnDismissAlarmRequested += () =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    foreach (var inst in _instances)
+                    {
+                        if (inst.Manager.IsAlarmActive)
+                        {
+                            inst.Manager.DismissAlarm();
+                        }
+                    }
+                });
+            };
+
             _hook.OnToggleRequested += ToggleAll;
 
             _hook.OnPauseToggleRequested += () =>
@@ -361,6 +384,86 @@ namespace TimeBomb
                 {
                     var target = GetTargetInstance();
                     if (target != null) CloseTimerInstance(target);
+                });
+            };
+        }
+
+        private void WireGamepadEvents()
+        {
+            if (_gamepadManager == null) return;
+
+            _gamepadManager.OnToggleRequested += ToggleAll;
+
+            _gamepadManager.OnPauseToggleRequested += () =>
+            {
+                GetTargetInstance()?.Manager.PauseToggle();
+            };
+
+            _gamepadManager.OnResetRequested += () =>
+            {
+                GetTargetInstance()?.Manager.Reset();
+            };
+
+            _gamepadManager.OnSaveRequested += () =>
+            {
+                GetTargetInstance()?.Manager.SaveCountdown();
+            };
+
+            _gamepadManager.OnSwitchModeRequested += () =>
+            {
+                GetTargetInstance()?.Manager.SwitchMode();
+            };
+
+            _gamepadManager.OnAdjustUpStart += () =>
+            {
+                GetTargetInstance()?.Manager.AdjustUpStart();
+            };
+
+            _gamepadManager.OnAdjustUpStop += () =>
+            {
+                GetTargetInstance()?.Manager.AdjustUpStop();
+            };
+
+            _gamepadManager.OnAdjustDownStart += () =>
+            {
+                GetTargetInstance()?.Manager.AdjustDownStart();
+            };
+
+            _gamepadManager.OnAdjustDownStop += () =>
+            {
+                GetTargetInstance()?.Manager.AdjustDownStop();
+            };
+
+            _gamepadManager.OnActionExecuted += () =>
+            {
+                GetTargetInstance()?.Manager.Unfreeze();
+            };
+
+            _gamepadManager.OnNewInstanceRequested += () =>
+            {
+                Dispatcher.Invoke(() => CreateTimerInstance());
+            };
+
+            _gamepadManager.OnCloseInstanceRequested += () =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    var target = GetTargetInstance();
+                    if (target != null) CloseTimerInstance(target);
+                });
+            };
+
+            _gamepadManager.OnDismissAlarmRequested += () =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    foreach (var inst in _instances)
+                    {
+                        if (inst.Manager.IsAlarmActive)
+                        {
+                            inst.Manager.DismissAlarm();
+                        }
+                    }
                 });
             };
         }
@@ -443,6 +546,36 @@ namespace TimeBomb
                 contextMenu.Items.Add(new ToolStripSeparator());
             }
 
+            if (_baseSettings != null)
+            {
+                var parallelItem = new ToolStripMenuItem("⌨️ Bàn phím & 🎮 Gamepad: Hoạt động song song") { Enabled = false };
+                parallelItem.Font = new System.Drawing.Font(parallelItem.Font, System.Drawing.FontStyle.Bold);
+                contextMenu.Items.Add(parallelItem);
+
+                var gamepadItem = new ToolStripMenuItem("🎮 Gamepad Control (Steam Deck / Xbox / PS4)");
+                gamepadItem.Checked = _baseSettings.GamepadEnabled;
+                gamepadItem.Click += (s, ev) =>
+                {
+                    _baseSettings.GamepadEnabled = !_baseSettings.GamepadEnabled;
+                    _baseSettings.Save();
+                    _gamepadManager?.SetEnabled(_baseSettings.GamepadEnabled);
+                    UpdateTrayIconMenu();
+                };
+                contextMenu.Items.Add(gamepadItem);
+
+                var vibItem = new ToolStripMenuItem("📳 Gamepad Vibration (Haptics)");
+                vibItem.Checked = _baseSettings.GamepadVibration;
+                vibItem.Click += (s, ev) =>
+                {
+                    _baseSettings.GamepadVibration = !_baseSettings.GamepadVibration;
+                    _baseSettings.Save();
+                    _gamepadManager?.SetVibrationEnabled(_baseSettings.GamepadVibration);
+                    UpdateTrayIconMenu();
+                };
+                contextMenu.Items.Add(vibItem);
+                contextMenu.Items.Add(new ToolStripSeparator());
+            }
+
             contextMenu.Items.Add("Exit All", null, (s, ev) => ExitApplication());
 
             _notifyIcon.ContextMenuStrip = contextMenu;
@@ -473,6 +606,8 @@ namespace TimeBomb
 
             _hook?.Dispose();
             _hook = null;
+            _gamepadManager?.Dispose();
+            _gamepadManager = null;
             _soundManager?.Dispose();
             _soundManager = null;
 

@@ -14,6 +14,8 @@ namespace TimeBomb.Core
         public int WindowY { get; set; } = 150;
         public string Mode { get; set; } = "timer";
         public int LastSetMinutes { get; set; } = 3;
+        public bool GamepadEnabled { get; set; } = true;
+        public bool GamepadVibration { get; set; } = true;
 
         public SettingsManager(int instanceId = 1)
         {
@@ -77,6 +79,16 @@ namespace TimeBomb.Core
                         WindowY += (InstanceId - 1) * 92;
                     }
                 }
+
+                if (TryGetValue("Gamepad", "enabled", out string padEnabledStr) && bool.TryParse(padEnabledStr, out bool padEnabled))
+                    GamepadEnabled = padEnabled;
+                else
+                    GamepadEnabled = true;
+
+                if (TryGetValue("Gamepad", "vibration", out string padVibStr) && bool.TryParse(padVibStr, out bool padVib))
+                    GamepadVibration = padVib;
+                else
+                    GamepadVibration = true;
             }
             catch
             {
@@ -129,6 +141,8 @@ namespace TimeBomb.Core
                     SetValue("Position", "y", WindowY.ToString());
                     SetValue("General", "mode", Mode);
                     SetValue("Timer", "LastSetMinutes", LastSetMinutes.ToString());
+                    SetValue("Gamepad", "enabled", GamepadEnabled.ToString().ToLowerInvariant());
+                    SetValue("Gamepad", "vibration", GamepadVibration.ToString().ToLowerInvariant());
                 }
 
                 List<string> lines = new List<string>();

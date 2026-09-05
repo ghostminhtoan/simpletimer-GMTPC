@@ -26,6 +26,9 @@ namespace TimeBomb.Core
         public const int VK_S = 0x53;        // S key
         public const int VK_N = 0x4E;        // N key (New Timer)
         public const int VK_W = 0x57;        // W key (Close Timer)
+        public const int VK_SPACE = 0x20;    // Space key
+        public const int VK_R = 0x52;        // R key
+        public const int VK_DELETE = 0x2E;   // Delete key
 
         [StructLayout(LayoutKind.Sequential)]
         public struct POINT
@@ -72,6 +75,45 @@ namespace TimeBomb.Core
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        public static extern IntPtr LoadLibrary(string lpFileName);
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi, ExactSpelling = true)]
+        public static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool FreeLibrary(IntPtr hModule);
+
+        #region WinMM Joystick / Gamepad (DirectInput fallback)
+        public const int JOYERR_NOERROR = 0;
+        public const int JOY_RETURNALL = 0x000000FF;
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct JOYINFOEX
+        {
+            public int dwSize;
+            public int dwFlags;
+            public int dwXpos;
+            public int dwYpos;
+            public int dwZpos;
+            public int dwRpos;
+            public int dwUpos;
+            public int dwVpos;
+            public int dwButtons;
+            public int dwButtonNumber;
+            public int dwPOV;
+            public int dwReserved1;
+            public int dwReserved2;
+        }
+
+        [DllImport("winmm.dll")]
+        public static extern int joyGetNumDevs();
+
+        [DllImport("winmm.dll")]
+        public static extern int joyGetPosEx(int uJoyID, ref JOYINFOEX pji);
+        #endregion
 
         public static void SetToolWindowAndNoActivate(IntPtr hWnd)
         {

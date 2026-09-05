@@ -84,6 +84,7 @@
     <Compile Include="Core\TimeBombManager.cs" />
     <Compile Include="Core\SoundManager.cs" />
     <Compile Include="Core\SettingsManager.cs" />
+    <Compile Include="Core\GamepadManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

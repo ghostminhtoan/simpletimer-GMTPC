@@ -354,6 +354,11 @@ namespace TimeBomb.Core
 
         public void OnWinKeyReleased()
         {
+            Unfreeze();
+        }
+
+        public void Unfreeze()
+        {
             // Freezing release handling
             if (Mode == AppMode.Stopwatch)
             {
