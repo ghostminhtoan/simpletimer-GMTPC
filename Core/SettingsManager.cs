@@ -22,17 +22,32 @@ namespace TimeBomb.Core
             InstanceId = instanceId;
 
             string appDir = AppDomain.CurrentDomain.BaseDirectory;
-            string stateDir = Path.Combine(appDir, "gui_state");
+            string portableDir = Path.Combine(appDir, ".portable");
             try
             {
-                if (!Directory.Exists(stateDir))
+                if (!Directory.Exists(portableDir))
                 {
-                    Directory.CreateDirectory(stateDir);
+                    Directory.CreateDirectory(portableDir);
                 }
             }
             catch { }
 
-            _iniPath = Path.Combine(stateDir, "config.ini");
+            _iniPath = Path.Combine(portableDir, "config.ini");
+
+            // Migrate legacy gui_state/config.ini if .portable/config.ini doesn't exist yet
+            try
+            {
+                if (!File.Exists(_iniPath))
+                {
+                    string legacyIni = Path.Combine(appDir, "gui_state", "config.ini");
+                    if (File.Exists(legacyIni))
+                    {
+                        File.Copy(legacyIni, _iniPath, true);
+                    }
+                }
+            }
+            catch { }
+
             Load();
         }
 
