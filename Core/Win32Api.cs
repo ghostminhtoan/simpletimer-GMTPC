@@ -26,7 +26,9 @@ namespace TimeBomb.Core
         public const uint SWP_NOZORDER = 0x0004;
         public const uint SWP_FRAMECHANGED = 0x0020;
 
+        public const int VK_SHIFT = 0x10;
         public const int VK_CONTROL = 0x11;
+        public const int VK_MENU = 0x12;      // Alt key
         public const int VK_LWIN = 0x5B;
         public const int VK_RWIN = 0x5C;
         public const int VK_OEM_3 = 0xC0;    // `~ key

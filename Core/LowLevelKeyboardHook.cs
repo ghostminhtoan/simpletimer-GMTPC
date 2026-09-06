@@ -13,6 +13,8 @@ namespace TimeBomb.Core
         private bool _isUpHeld = false;
         private bool _isDownHeld = false;
 
+        private SettingsManager _settings;
+
         public event Action OnToggleRequested;
         public event Action OnIntervalToggleRequested;
         public event Action OnPauseToggleRequested;
@@ -35,10 +37,16 @@ namespace TimeBomb.Core
         public bool IsWinKeyHeld => _isWinDown;
         public bool ShortcutExecuted => _shortcutExecuted;
 
-        public LowLevelKeyboardHook()
+        public LowLevelKeyboardHook(SettingsManager settings = null)
         {
+            _settings = settings;
             _proc = HookCallback;
             InstallHook();
+        }
+
+        public void SetSettings(SettingsManager settings)
+        {
+            _settings = settings;
         }
 
         private void InstallHook()
@@ -109,100 +117,112 @@ namespace TimeBomb.Core
                         }
                     }
 
-                    // Hotkey combinations with Win key
-                    if (_isWinDown)
+                    // Read real-time state of physical modifier keys
+                    bool currentWin = _isWinDown
+                                   || (Win32Api.GetAsyncKeyState(Win32Api.VK_LWIN) & 0x8000) != 0
+                                   || (Win32Api.GetAsyncKeyState(Win32Api.VK_RWIN) & 0x8000) != 0;
+                    bool currentCtrl = (Win32Api.GetAsyncKeyState(Win32Api.VK_CONTROL) & 0x8000) != 0;
+                    bool currentAlt = (Win32Api.GetAsyncKeyState(Win32Api.VK_MENU) & 0x8000) != 0;
+                    bool currentShift = (Win32Api.GetAsyncKeyState(Win32Api.VK_SHIFT) & 0x8000) != 0;
+
+                    // Hotkey matching checking
+                    if (isKeyDown)
                     {
-                        if (isKeyDown)
+                        if (CheckHotkeyMatch(_settings, "ToggleHUD", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
-                            switch (vk)
+                            _shortcutExecuted = true;
+                            if (currentCtrl)
                             {
-                                case Win32Api.VK_OEM_3: // ` or ~
-                                    _shortcutExecuted = true;
-                                    bool isCtrl = (Win32Api.GetAsyncKeyState(Win32Api.VK_CONTROL) & 0x8000) != 0;
-                                    if (isCtrl)
-                                    {
-                                        OnIntervalToggleRequested?.Invoke();
-                                    }
-                                    else
-                                    {
-                                        OnToggleRequested?.Invoke();
-                                    }
-                                    ForceReleaseWinKey();
-                                    return (IntPtr)1;
-
-                                case Win32Api.VK_SPACE:  // Space
-                                    _shortcutExecuted = true;
-                                    OnPauseToggleRequested?.Invoke();
-                                    ForceReleaseWinKey();
-                                    return (IntPtr)1;
-
-                                case Win32Api.VK_BACK: // Backspace
-                                case Win32Api.VK_R:    // R
-                                    _shortcutExecuted = true;
-                                    OnResetRequested?.Invoke();
-                                    ForceReleaseWinKey();
-                                    return (IntPtr)1;
-
-                                case Win32Api.VK_S: // S
-                                    _shortcutExecuted = true;
-                                    OnSaveRequested?.Invoke();
-                                    ForceReleaseWinKey();
-                                    return (IntPtr)1;
-
-                                case Win32Api.VK_ESCAPE: // Esc
-                                    _shortcutExecuted = true;
-                                    OnSwitchModeRequested?.Invoke();
-                                    ForceReleaseWinKey();
-                                    return (IntPtr)1;
-
-                                case Win32Api.VK_N: // N (New Timer)
-                                    _shortcutExecuted = true;
-                                    OnNewInstanceRequested?.Invoke();
-                                    ForceReleaseWinKey();
-                                    return (IntPtr)1;
-
-                                case Win32Api.VK_W:      // W (Close Timer)
-                                case Win32Api.VK_DELETE: // Delete
-                                    _shortcutExecuted = true;
-                                    OnCloseInstanceRequested?.Invoke();
-                                    ForceReleaseWinKey();
-                                    return (IntPtr)1;
-
-                                case Win32Api.VK_UP: // Up arrow
-                                    if (!_isUpHeld)
-                                    {
-                                        _isUpHeld = true;
-                                        _shortcutExecuted = true;
-                                        OnAdjustUpStart?.Invoke();
-                                    }
-                                    return (IntPtr)1;
-
-                                case Win32Api.VK_DOWN: // Down arrow
-                                    if (!_isDownHeld)
-                                    {
-                                        _isDownHeld = true;
-                                        _shortcutExecuted = true;
-                                        OnAdjustDownStart?.Invoke();
-                                    }
-                                    return (IntPtr)1;
+                                OnIntervalToggleRequested?.Invoke();
                             }
+                            else
+                            {
+                                OnToggleRequested?.Invoke();
+                            }
+                            ForceReleaseWinKey();
+                            return (IntPtr)1;
                         }
-                        else if (isKeyUp)
+                        else if (CheckHotkeyMatch(_settings, "PauseToggle", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
-                            if (vk == Win32Api.VK_UP && _isUpHeld)
+                            _shortcutExecuted = true;
+                            OnPauseToggleRequested?.Invoke();
+                            ForceReleaseWinKey();
+                            return (IntPtr)1;
+                        }
+                        else if (CheckHotkeyMatch(_settings, "Reset", vk, currentWin, currentCtrl, currentAlt, currentShift))
+                        {
+                            _shortcutExecuted = true;
+                            OnResetRequested?.Invoke();
+                            ForceReleaseWinKey();
+                            return (IntPtr)1;
+                        }
+                        else if (CheckHotkeyMatch(_settings, "SaveCountdown", vk, currentWin, currentCtrl, currentAlt, currentShift))
+                        {
+                            _shortcutExecuted = true;
+                            OnSaveRequested?.Invoke();
+                            ForceReleaseWinKey();
+                            return (IntPtr)1;
+                        }
+                        else if (CheckHotkeyMatch(_settings, "SwitchMode", vk, currentWin, currentCtrl, currentAlt, currentShift))
+                        {
+                            _shortcutExecuted = true;
+                            OnSwitchModeRequested?.Invoke();
+                            ForceReleaseWinKey();
+                            return (IntPtr)1;
+                        }
+                        else if (CheckHotkeyMatch(_settings, "NewInstance", vk, currentWin, currentCtrl, currentAlt, currentShift))
+                        {
+                            _shortcutExecuted = true;
+                            OnNewInstanceRequested?.Invoke();
+                            ForceReleaseWinKey();
+                            return (IntPtr)1;
+                        }
+                        else if (CheckHotkeyMatch(_settings, "CloseInstance", vk, currentWin, currentCtrl, currentAlt, currentShift) || (currentWin && vk == Win32Api.VK_DELETE))
+                        {
+                            _shortcutExecuted = true;
+                            OnCloseInstanceRequested?.Invoke();
+                            ForceReleaseWinKey();
+                            return (IntPtr)1;
+                        }
+                        else if (CheckHotkeyMatch(_settings, "AdjustUp", vk, currentWin, currentCtrl, currentAlt, currentShift))
+                        {
+                            if (!_isUpHeld)
                             {
-                                _isUpHeld = false;
-                                OnAdjustUpStop?.Invoke();
-                                ForceReleaseWinKey();
-                                return (IntPtr)1;
+                                _isUpHeld = true;
+                                _shortcutExecuted = true;
+                                OnAdjustUpStart?.Invoke();
                             }
-                            else if (vk == Win32Api.VK_DOWN && _isDownHeld)
+                            return (IntPtr)1;
+                        }
+                        else if (CheckHotkeyMatch(_settings, "AdjustDown", vk, currentWin, currentCtrl, currentAlt, currentShift))
+                        {
+                            if (!_isDownHeld)
                             {
-                                _isDownHeld = false;
-                                OnAdjustDownStop?.Invoke();
-                                ForceReleaseWinKey();
-                                return (IntPtr)1;
+                                _isDownHeld = true;
+                                _shortcutExecuted = true;
+                                OnAdjustDownStart?.Invoke();
                             }
+                            return (IntPtr)1;
+                        }
+                    }
+                    else if (isKeyUp)
+                    {
+                        uint kUp = _settings != null ? _settings.KeyAdjustUp : Win32Api.VK_UP;
+                        uint kDown = _settings != null ? _settings.KeyAdjustDown : Win32Api.VK_DOWN;
+
+                        if (vk == kUp && _isUpHeld)
+                        {
+                            _isUpHeld = false;
+                            OnAdjustUpStop?.Invoke();
+                            ForceReleaseWinKey();
+                            return (IntPtr)1;
+                        }
+                        else if (vk == kDown && _isDownHeld)
+                        {
+                            _isDownHeld = false;
+                            OnAdjustDownStop?.Invoke();
+                            ForceReleaseWinKey();
+                            return (IntPtr)1;
                         }
                     }
                     else
@@ -229,6 +249,29 @@ namespace TimeBomb.Core
             }
 
             return Win32Api.CallNextHookEx(_hookId, nCode, wParam, lParam);
+        }
+
+        private bool CheckHotkeyMatch(SettingsManager settings, string name, uint vk, bool isWin, bool isCtrl, bool isAlt, bool isShift)
+        {
+            if (settings == null) return false;
+
+            bool reqWin = false, reqCtrl = false, reqAlt = false, reqShift = false;
+            uint reqVk = 0;
+
+            switch (name)
+            {
+                case "ToggleHUD": reqWin = settings.KeyToggleHUD_Win; reqCtrl = settings.KeyToggleHUD_Ctrl; reqAlt = settings.KeyToggleHUD_Alt; reqShift = settings.KeyToggleHUD_Shift; reqVk = settings.KeyToggleHUD; break;
+                case "PauseToggle": reqWin = settings.KeyPauseToggle_Win; reqCtrl = settings.KeyPauseToggle_Ctrl; reqAlt = settings.KeyPauseToggle_Alt; reqShift = settings.KeyPauseToggle_Shift; reqVk = settings.KeyPauseToggle; break;
+                case "Reset": reqWin = settings.KeyReset_Win; reqCtrl = settings.KeyReset_Ctrl; reqAlt = settings.KeyReset_Alt; reqShift = settings.KeyReset_Shift; reqVk = settings.KeyReset; break;
+                case "SaveCountdown": reqWin = settings.KeySaveCountdown_Win; reqCtrl = settings.KeySaveCountdown_Ctrl; reqAlt = settings.KeySaveCountdown_Alt; reqShift = settings.KeySaveCountdown_Shift; reqVk = settings.KeySaveCountdown; break;
+                case "SwitchMode": reqWin = settings.KeySwitchMode_Win; reqCtrl = settings.KeySwitchMode_Ctrl; reqAlt = settings.KeySwitchMode_Alt; reqShift = settings.KeySwitchMode_Shift; reqVk = settings.KeySwitchMode; break;
+                case "NewInstance": reqWin = settings.KeyNewInstance_Win; reqCtrl = settings.KeyNewInstance_Ctrl; reqAlt = settings.KeyNewInstance_Alt; reqShift = settings.KeyNewInstance_Shift; reqVk = settings.KeyNewInstance; break;
+                case "CloseInstance": reqWin = settings.KeyCloseInstance_Win; reqCtrl = settings.KeyCloseInstance_Ctrl; reqAlt = settings.KeyCloseInstance_Alt; reqShift = settings.KeyCloseInstance_Shift; reqVk = settings.KeyCloseInstance; break;
+                case "AdjustUp": reqWin = settings.KeyAdjustUp_Win; reqCtrl = settings.KeyAdjustUp_Ctrl; reqAlt = settings.KeyAdjustUp_Alt; reqShift = settings.KeyAdjustUp_Shift; reqVk = settings.KeyAdjustUp; break;
+                case "AdjustDown": reqWin = settings.KeyAdjustDown_Win; reqCtrl = settings.KeyAdjustDown_Ctrl; reqAlt = settings.KeyAdjustDown_Alt; reqShift = settings.KeyAdjustDown_Shift; reqVk = settings.KeyAdjustDown; break;
+            }
+
+            return vk == reqVk && isWin == reqWin && isCtrl == reqCtrl && isAlt == reqAlt && isShift == reqShift;
         }
 
         private void ForceReleaseWinKey()

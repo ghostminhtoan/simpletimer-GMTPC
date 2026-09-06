@@ -21,6 +21,61 @@ namespace TimeBomb.Core
         public bool GamepadEnabled { get; set; } = true;
         public bool GamepadVibration { get; set; } = true;
 
+        // Custom Hotkeys Settings (Modifiers + Key VK)
+        public bool KeyToggleHUD_Win { get; set; } = true;
+        public bool KeyToggleHUD_Ctrl { get; set; } = false;
+        public bool KeyToggleHUD_Alt { get; set; } = false;
+        public bool KeyToggleHUD_Shift { get; set; } = false;
+        public uint KeyToggleHUD { get; set; } = Win32Api.VK_OEM_3; // `
+
+        public bool KeyPauseToggle_Win { get; set; } = true;
+        public bool KeyPauseToggle_Ctrl { get; set; } = false;
+        public bool KeyPauseToggle_Alt { get; set; } = false;
+        public bool KeyPauseToggle_Shift { get; set; } = false;
+        public uint KeyPauseToggle { get; set; } = Win32Api.VK_SPACE; // Space
+
+        public bool KeyReset_Win { get; set; } = true;
+        public bool KeyReset_Ctrl { get; set; } = false;
+        public bool KeyReset_Alt { get; set; } = false;
+        public bool KeyReset_Shift { get; set; } = false;
+        public uint KeyReset { get; set; } = Win32Api.VK_BACK; // Backspace
+
+        public bool KeySaveCountdown_Win { get; set; } = true;
+        public bool KeySaveCountdown_Ctrl { get; set; } = false;
+        public bool KeySaveCountdown_Alt { get; set; } = false;
+        public bool KeySaveCountdown_Shift { get; set; } = false;
+        public uint KeySaveCountdown { get; set; } = Win32Api.VK_S; // S
+
+        public bool KeySwitchMode_Win { get; set; } = true;
+        public bool KeySwitchMode_Ctrl { get; set; } = false;
+        public bool KeySwitchMode_Alt { get; set; } = false;
+        public bool KeySwitchMode_Shift { get; set; } = false;
+        public uint KeySwitchMode { get; set; } = Win32Api.VK_ESCAPE; // Esc
+
+        public bool KeyNewInstance_Win { get; set; } = true;
+        public bool KeyNewInstance_Ctrl { get; set; } = false;
+        public bool KeyNewInstance_Alt { get; set; } = false;
+        public bool KeyNewInstance_Shift { get; set; } = false;
+        public uint KeyNewInstance { get; set; } = Win32Api.VK_N; // N
+
+        public bool KeyCloseInstance_Win { get; set; } = true;
+        public bool KeyCloseInstance_Ctrl { get; set; } = false;
+        public bool KeyCloseInstance_Alt { get; set; } = false;
+        public bool KeyCloseInstance_Shift { get; set; } = false;
+        public uint KeyCloseInstance { get; set; } = Win32Api.VK_W; // W
+
+        public bool KeyAdjustUp_Win { get; set; } = true;
+        public bool KeyAdjustUp_Ctrl { get; set; } = false;
+        public bool KeyAdjustUp_Alt { get; set; } = false;
+        public bool KeyAdjustUp_Shift { get; set; } = false;
+        public uint KeyAdjustUp { get; set; } = Win32Api.VK_UP; // Up
+
+        public bool KeyAdjustDown_Win { get; set; } = true;
+        public bool KeyAdjustDown_Ctrl { get; set; } = false;
+        public bool KeyAdjustDown_Alt { get; set; } = false;
+        public bool KeyAdjustDown_Shift { get; set; } = false;
+        public uint KeyAdjustDown { get; set; } = Win32Api.VK_DOWN; // Down
+
         // Interval Timer settings
         public int IntervalPrepare { get; set; } = 5;
         public int IntervalWork { get; set; } = 30;
@@ -148,11 +203,74 @@ namespace TimeBomb.Core
                     IntervalWindowX = ix;
                 if (TryGetValue("Interval", "WindowY", out string iyStr) && int.TryParse(iyStr, out int iy))
                     IntervalWindowY = iy;
+
+                // Hotkeys Load
+                bool w = KeyToggleHUD_Win, c = KeyToggleHUD_Ctrl, a = KeyToggleHUD_Alt, s = KeyToggleHUD_Shift; uint k = KeyToggleHUD;
+                LoadHotkeyConfig("ToggleHUD", ref w, ref c, ref a, ref s, ref k);
+                KeyToggleHUD_Win = w; KeyToggleHUD_Ctrl = c; KeyToggleHUD_Alt = a; KeyToggleHUD_Shift = s; KeyToggleHUD = k;
+
+                w = KeyPauseToggle_Win; c = KeyPauseToggle_Ctrl; a = KeyPauseToggle_Alt; s = KeyPauseToggle_Shift; k = KeyPauseToggle;
+                LoadHotkeyConfig("PauseToggle", ref w, ref c, ref a, ref s, ref k);
+                KeyPauseToggle_Win = w; KeyPauseToggle_Ctrl = c; KeyPauseToggle_Alt = a; KeyPauseToggle_Shift = s; KeyPauseToggle = k;
+
+                w = KeyReset_Win; c = KeyReset_Ctrl; a = KeyReset_Alt; s = KeyReset_Shift; k = KeyReset;
+                LoadHotkeyConfig("Reset", ref w, ref c, ref a, ref s, ref k);
+                KeyReset_Win = w; KeyReset_Ctrl = c; KeyReset_Alt = a; KeyReset_Shift = s; KeyReset = k;
+
+                w = KeySaveCountdown_Win; c = KeySaveCountdown_Ctrl; a = KeySaveCountdown_Alt; s = KeySaveCountdown_Shift; k = KeySaveCountdown;
+                LoadHotkeyConfig("SaveCountdown", ref w, ref c, ref a, ref s, ref k);
+                KeySaveCountdown_Win = w; KeySaveCountdown_Ctrl = c; KeySaveCountdown_Alt = a; KeySaveCountdown_Shift = s; KeySaveCountdown = k;
+
+                w = KeySwitchMode_Win; c = KeySwitchMode_Ctrl; a = KeySwitchMode_Alt; s = KeySwitchMode_Shift; k = KeySwitchMode;
+                LoadHotkeyConfig("SwitchMode", ref w, ref c, ref a, ref s, ref k);
+                KeySwitchMode_Win = w; KeySwitchMode_Ctrl = c; KeySwitchMode_Alt = a; KeySwitchMode_Shift = s; KeySwitchMode = k;
+
+                w = KeyNewInstance_Win; c = KeyNewInstance_Ctrl; a = KeyNewInstance_Alt; s = KeyNewInstance_Shift; k = KeyNewInstance;
+                LoadHotkeyConfig("NewInstance", ref w, ref c, ref a, ref s, ref k);
+                KeyNewInstance_Win = w; KeyNewInstance_Ctrl = c; KeyNewInstance_Alt = a; KeyNewInstance_Shift = s; KeyNewInstance = k;
+
+                w = KeyCloseInstance_Win; c = KeyCloseInstance_Ctrl; a = KeyCloseInstance_Alt; s = KeyCloseInstance_Shift; k = KeyCloseInstance;
+                LoadHotkeyConfig("CloseInstance", ref w, ref c, ref a, ref s, ref k);
+                KeyCloseInstance_Win = w; KeyCloseInstance_Ctrl = c; KeyCloseInstance_Alt = a; KeyCloseInstance_Shift = s; KeyCloseInstance = k;
+
+                w = KeyAdjustUp_Win; c = KeyAdjustUp_Ctrl; a = KeyAdjustUp_Alt; s = KeyAdjustUp_Shift; k = KeyAdjustUp;
+                LoadHotkeyConfig("AdjustUp", ref w, ref c, ref a, ref s, ref k);
+                KeyAdjustUp_Win = w; KeyAdjustUp_Ctrl = c; KeyAdjustUp_Alt = a; KeyAdjustUp_Shift = s; KeyAdjustUp = k;
+
+                w = KeyAdjustDown_Win; c = KeyAdjustDown_Ctrl; a = KeyAdjustDown_Alt; s = KeyAdjustDown_Shift; k = KeyAdjustDown;
+                LoadHotkeyConfig("AdjustDown", ref w, ref c, ref a, ref s, ref k);
+                KeyAdjustDown_Win = w; KeyAdjustDown_Ctrl = c; KeyAdjustDown_Alt = a; KeyAdjustDown_Shift = s; KeyAdjustDown = k;
             }
             catch
             {
                 // Fallback to default values if parse fails
             }
+        }
+
+        private void LoadHotkeyConfig(string name, ref bool win, ref bool ctrl, ref bool alt, ref bool shift, ref uint vk)
+        {
+            if (TryGetValue("Hotkeys", name + "_Win", out string wStr) && bool.TryParse(wStr, out bool w)) win = w;
+            if (TryGetValue("Hotkeys", name + "_Ctrl", out string cStr) && bool.TryParse(cStr, out bool c)) ctrl = c;
+            if (TryGetValue("Hotkeys", name + "_Alt", out string aStr) && bool.TryParse(aStr, out bool a)) alt = a;
+            if (TryGetValue("Hotkeys", name + "_Shift", out string sStr) && bool.TryParse(sStr, out bool s)) shift = s;
+            if (TryGetValue("Hotkeys", name, out string kStr) && uint.TryParse(kStr, out uint k)) vk = k;
+        }
+
+        // Helper backing fields
+        private bool _keyToggleHUD_Win => KeyToggleHUD_Win;
+        private bool _keyToggleHUD_Ctrl => KeyToggleHUD_Ctrl;
+
+        public void ResetHotkeysToDefault()
+        {
+            KeyToggleHUD_Win = true; KeyToggleHUD_Ctrl = false; KeyToggleHUD_Alt = false; KeyToggleHUD_Shift = false; KeyToggleHUD = Win32Api.VK_OEM_3;
+            KeyPauseToggle_Win = true; KeyPauseToggle_Ctrl = false; KeyPauseToggle_Alt = false; KeyPauseToggle_Shift = false; KeyPauseToggle = Win32Api.VK_SPACE;
+            KeyReset_Win = true; KeyReset_Ctrl = false; KeyReset_Alt = false; KeyReset_Shift = false; KeyReset = Win32Api.VK_BACK;
+            KeySaveCountdown_Win = true; KeySaveCountdown_Ctrl = false; KeySaveCountdown_Alt = false; KeySaveCountdown_Shift = false; KeySaveCountdown = Win32Api.VK_S;
+            KeySwitchMode_Win = true; KeySwitchMode_Ctrl = false; KeySwitchMode_Alt = false; KeySwitchMode_Shift = false; KeySwitchMode = Win32Api.VK_ESCAPE;
+            KeyNewInstance_Win = true; KeyNewInstance_Ctrl = false; KeyNewInstance_Alt = false; KeyNewInstance_Shift = false; KeyNewInstance = Win32Api.VK_N;
+            KeyCloseInstance_Win = true; KeyCloseInstance_Ctrl = false; KeyCloseInstance_Alt = false; KeyCloseInstance_Shift = false; KeyCloseInstance = Win32Api.VK_W;
+            KeyAdjustUp_Win = true; KeyAdjustUp_Ctrl = false; KeyAdjustUp_Alt = false; KeyAdjustUp_Shift = false; KeyAdjustUp = Win32Api.VK_UP;
+            KeyAdjustDown_Win = true; KeyAdjustDown_Ctrl = false; KeyAdjustDown_Alt = false; KeyAdjustDown_Shift = false; KeyAdjustDown = Win32Api.VK_DOWN;
         }
 
         private void ParseIniFile()
@@ -225,6 +343,16 @@ namespace TimeBomb.Core
                         SetValue("Interval", "Loops", IntervalLoops.ToString());
                         SetValue("Interval", "WindowX", IntervalWindowX.ToString());
                         SetValue("Interval", "WindowY", IntervalWindowY.ToString());
+
+                        SaveHotkeyConfig("ToggleHUD", KeyToggleHUD_Win, KeyToggleHUD_Ctrl, KeyToggleHUD_Alt, KeyToggleHUD_Shift, KeyToggleHUD);
+                        SaveHotkeyConfig("PauseToggle", KeyPauseToggle_Win, KeyPauseToggle_Ctrl, KeyPauseToggle_Alt, KeyPauseToggle_Shift, KeyPauseToggle);
+                        SaveHotkeyConfig("Reset", KeyReset_Win, KeyReset_Ctrl, KeyReset_Alt, KeyReset_Shift, KeyReset);
+                        SaveHotkeyConfig("SaveCountdown", KeySaveCountdown_Win, KeySaveCountdown_Ctrl, KeySaveCountdown_Alt, KeySaveCountdown_Shift, KeySaveCountdown);
+                        SaveHotkeyConfig("SwitchMode", KeySwitchMode_Win, KeySwitchMode_Ctrl, KeySwitchMode_Alt, KeySwitchMode_Shift, KeySwitchMode);
+                        SaveHotkeyConfig("NewInstance", KeyNewInstance_Win, KeyNewInstance_Ctrl, KeyNewInstance_Alt, KeyNewInstance_Shift, KeyNewInstance);
+                        SaveHotkeyConfig("CloseInstance", KeyCloseInstance_Win, KeyCloseInstance_Ctrl, KeyCloseInstance_Alt, KeyCloseInstance_Shift, KeyCloseInstance);
+                        SaveHotkeyConfig("AdjustUp", KeyAdjustUp_Win, KeyAdjustUp_Ctrl, KeyAdjustUp_Alt, KeyAdjustUp_Shift, KeyAdjustUp);
+                        SaveHotkeyConfig("AdjustDown", KeyAdjustDown_Win, KeyAdjustDown_Ctrl, KeyAdjustDown_Alt, KeyAdjustDown_Shift, KeyAdjustDown);
                     }
 
                     List<string> lines = new List<string>();
@@ -245,6 +373,15 @@ namespace TimeBomb.Core
             {
                 // Ignore IO issues on exit
             }
+        }
+
+        private void SaveHotkeyConfig(string name, bool win, bool ctrl, bool alt, bool shift, uint vk)
+        {
+            SetValue("Hotkeys", name + "_Win", win.ToString().ToLowerInvariant());
+            SetValue("Hotkeys", name + "_Ctrl", ctrl.ToString().ToLowerInvariant());
+            SetValue("Hotkeys", name + "_Alt", alt.ToString().ToLowerInvariant());
+            SetValue("Hotkeys", name + "_Shift", shift.ToString().ToLowerInvariant());
+            SetValue("Hotkeys", name, vk.ToString());
         }
 
         private bool TryGetValue(string section, string key, out string val)

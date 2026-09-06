@@ -186,9 +186,9 @@ namespace TimeBomb
                 SetupIpcEvent();
 
                 _soundManager = new SoundManager();
-                _hook = new LowLevelKeyboardHook();
-                _mouseHook = new LowLevelMouseHook();
                 _baseSettings = new SettingsManager(1);
+                _hook = new LowLevelKeyboardHook(_baseSettings);
+                _mouseHook = new LowLevelMouseHook();
                 _gamepadManager = new GamepadManager(_baseSettings);
 
                 WireHookEvents();
@@ -566,6 +566,23 @@ namespace TimeBomb
             };
         }
 
+        public void OpenShortcutSettingsDialog()
+        {
+            if (Dispatcher != null && !Dispatcher.HasShutdownStarted)
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    var dlg = new ShortcutSettingsWindow(_baseSettings);
+                    dlg.OnShortcutsSaved += () =>
+                    {
+                        UpdateTrayIconMenu();
+                    };
+                    dlg.Show();
+                    dlg.Activate();
+                });
+            }
+        }
+
         private void ToggleIntervalTimer()
         {
             if (Dispatcher != null && !Dispatcher.HasShutdownStarted)
@@ -664,6 +681,7 @@ namespace TimeBomb
             contextMenu.Items.Add("Pause / Resume Active (Win + Enter)", null, (s, ev) => GetTargetInstance()?.Manager.PauseToggle());
             contextMenu.Items.Add("Reset Active (Win + Backspace)", null, (s, ev) => GetTargetInstance()?.Manager.Reset());
             contextMenu.Items.Add("Switch Mode Active (Win + Esc)", null, (s, ev) => GetTargetInstance()?.Manager.SwitchMode());
+            contextMenu.Items.Add("Edit Shortcut (Chỉnh phím tắt)", null, (s, ev) => OpenShortcutSettingsDialog());
             contextMenu.Items.Add(new ToolStripSeparator());
 
             var activeInst = GetTargetInstance();

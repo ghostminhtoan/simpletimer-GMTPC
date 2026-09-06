@@ -1,0 +1,175 @@
+<Window x:Class="TimeBomb.ShortcutSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Edit Shortcuts"
+        Width="580" Height="480"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <DropShadowEffect x:Key="WindowGlow" Color="#23FF23" BlurRadius="16" ShadowDepth="0" Opacity="0.6"/>
+        <DropShadowEffect x:Key="TextGlow" Color="#23FF23" BlurRadius="6" ShadowDepth="0" Opacity="0.7"/>
+
+        <Style x:Key="CyberpunkButton" TargetType="Button">
+            <Setter Property="Background" Value="#2B2B36"/>
+            <Setter Property="Foreground" Value="#23FF23"/>
+            <Setter Property="BorderBrush" Value="#4423FF23"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#383848"/>
+                                <Setter TargetName="btnBorder" Property="BorderBrush" Value="#66FF66"/>
+                                <Setter Property="Foreground" Value="#66FF66"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#23FF23"/>
+                                <Setter Property="Foreground" Value="#1E1E24"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CyberpunkCheckBox" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="#A0FFA0"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal">
+                            <Border x:Name="chkBox"
+                                    Width="16" Height="16"
+                                    Background="#262630"
+                                    BorderBrush="#4423FF23"
+                                    BorderThickness="1"
+                                    CornerRadius="3"
+                                    Margin="0,0,4,0">
+                                <TextBlock x:Name="chkMark" Text="✓"
+                                           Foreground="#23FF23"
+                                           FontSize="11" FontWeight="Bold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Visibility="Collapsed"/>
+                            </Border>
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="chkMark" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="chkBox" Property="BorderBrush" Value="#23FF23"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="chkBox" Property="BorderBrush" Value="#66FF66"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CyberpunkTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="#262630"/>
+            <Setter Property="Foreground" Value="#23FF23"/>
+            <Setter Property="BorderBrush" Value="#4423FF23"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="CaretBrush" Value="#23FF23"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+        </Style>
+    </Window.Resources>
+
+    <Border Background="#F21E1E24"
+            BorderBrush="#23FF23"
+            BorderThickness="1.5"
+            CornerRadius="10"
+            Effect="{StaticResource WindowGlow}"
+            MouseLeftButtonDown="Header_MouseLeftButtonDown"
+            SnapsToDevicePixels="True">
+        <Grid Margin="14,10,14,10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <DockPanel Grid.Row="0" Margin="0,0,0,10" LastChildFill="False">
+                <TextBlock Text="⌨️ EDIT SHORTCUTS (GLOBAL)"
+                           FontFamily="Segoe UI, Arial"
+                           FontSize="13"
+                           FontWeight="Bold"
+                           Foreground="#23FF23"
+                           Effect="{StaticResource TextGlow}"
+                           DockPanel.Dock="Left"
+                           VerticalAlignment="Center"/>
+                <Button Content="✕"
+                        Width="22" Height="22"
+                        Style="{StaticResource CyberpunkButton}"
+                        DockPanel.Dock="Right"
+                        Click="BtnClose_Click"/>
+            </DockPanel>
+
+            <!-- Shortcuts List Container -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="PnlShortcuts" Margin="0,0,4,0">
+                    <!-- Dynamic items added in code-behind -->
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Bottom Action Row -->
+            <Grid Grid.Row="2" Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="0"
+                        Content="Reset Defaults"
+                        Width="110" Height="26"
+                        Style="{StaticResource CyberpunkButton}"
+                        Click="BtnResetDefaults_Click"
+                        HorizontalAlignment="Left"/>
+
+                <Button Grid.Column="1"
+                        Content="SAVE"
+                        Width="75" Height="26"
+                        Style="{StaticResource CyberpunkButton}"
+                        Click="BtnSave_Click"
+                        Margin="0,0,6,0"/>
+
+                <Button Grid.Column="2"
+                        Content="CANCEL"
+                        Width="75" Height="26"
+                        Style="{StaticResource CyberpunkButton}"
+                        Click="BtnClose_Click"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

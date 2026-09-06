@@ -316,6 +316,16 @@ namespace TimeBomb
                 menu.Items.Add(itemSet);
             }
 
+            var itemEditShortcut = new System.Windows.Controls.MenuItem { Header = "Edit Shortcut (Chỉnh phím tắt)", Foreground = _greenBrush };
+            itemEditShortcut.Click += (s, ev) =>
+            {
+                if (Application.Current is App app)
+                {
+                    app.OpenShortcutSettingsDialog();
+                }
+            };
+            menu.Items.Add(itemEditShortcut);
+
             menu.Items.Add(new System.Windows.Controls.Separator());
 
             // Click Through option
