@@ -13,6 +13,8 @@ namespace TimeBomb.Core
         public int InstanceId { get; set; } = 1;
         public int WindowX { get; set; } = 150;
         public int WindowY { get; set; } = 150;
+        public int WindowWidth { get; set; } = 180;
+        public int WindowHeight { get; set; } = 82;
         public string Mode { get; set; } = "timer";
         public int LastSetMinutes { get; set; } = 3;
         public int LastSetSeconds { get; set; } = 0;
@@ -141,6 +143,10 @@ namespace TimeBomb.Core
                         WindowX = x;
                     if (TryGetValue(sec, "y", out string yStr) && int.TryParse(yStr, out int y))
                         WindowY = y;
+                    if (TryGetValue(sec, "width", out string wStr) && int.TryParse(wStr, out int wVal))
+                        WindowWidth = Math.Max(120, Math.Min(1200, wVal));
+                    if (TryGetValue(sec, "height", out string hStr) && int.TryParse(hStr, out int hVal))
+                        WindowHeight = Math.Max(50, Math.Min(600, hVal));
                     if (TryGetValue(sec, "mode", out string mode))
                         Mode = mode.ToLowerInvariant();
                     if (TryGetValue(sec, "LastSetMinutes", out string minsStr) && int.TryParse(minsStr, out int mins))
@@ -319,6 +325,8 @@ namespace TimeBomb.Core
                     string sec = "Instance_" + InstanceId;
                     SetValue(sec, "x", WindowX.ToString());
                     SetValue(sec, "y", WindowY.ToString());
+                    SetValue(sec, "width", WindowWidth.ToString());
+                    SetValue(sec, "height", WindowHeight.ToString());
                     SetValue(sec, "mode", Mode);
                     SetValue(sec, "LastSetMinutes", LastSetMinutes.ToString());
                     SetValue(sec, "LastSetSeconds", LastSetSeconds.ToString());

@@ -47,12 +47,15 @@ namespace TimeBomb
             _normalGlow = (DropShadowEffect)Resources["NormalGlow"];
             _redGlow = (DropShadowEffect)Resources["RedGlow"];
 
-            // Load saved position
+            // Load saved position and size
             Left = _settings.WindowX;
             Top = _settings.WindowY;
+            if (_settings.WindowWidth >= 130) Width = _settings.WindowWidth;
+            if (_settings.WindowHeight >= 60) Height = _settings.WindowHeight;
 
             SourceInitialized += OnSourceInitialized;
             Loaded += OnLoaded;
+            SizeChanged += OnSizeChanged;
             MouseEnter += OnMouseEnter;
             MouseLeftButtonDown += OnMouseLeftButtonDown;
             MouseLeftButtonUp += OnMouseLeftButtonUp;
@@ -60,6 +63,16 @@ namespace TimeBomb
             MouseWheel += OnMouseWheel;
             MouseRightButtonUp += OnMouseRightButtonUp;
             MouseUp += OnMouseUp;
+        }
+
+        private void OnSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (_settings != null && Width > 0 && Height > 0)
+            {
+                _settings.WindowWidth = (int)ActualWidth;
+                _settings.WindowHeight = (int)ActualHeight;
+                _settings.Save();
+            }
         }
 
         private void OnSourceInitialized(object sender, EventArgs e)
