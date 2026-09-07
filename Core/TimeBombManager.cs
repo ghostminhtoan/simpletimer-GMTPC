@@ -19,6 +19,7 @@ namespace TimeBomb.Core
         private readonly DispatcherTimer _tickTimer;
         private readonly DispatcherTimer _blinkTimer;
         private readonly DispatcherTimer _adjustTimer;
+        private readonly DispatcherTimer _alarmAutoStopTimer;
 
         // Current state
         public AppMode Mode { get; private set; } = AppMode.Timer;
@@ -104,6 +105,13 @@ namespace TimeBomb.Core
                 Interval = TimeSpan.FromMilliseconds(30)
             };
             _adjustTimer.Tick += OnAdjustTick;
+
+            // Alarm 30-second auto-stop timer
+            _alarmAutoStopTimer = new DispatcherTimer(DispatcherPriority.Normal)
+            {
+                Interval = TimeSpan.FromSeconds(30)
+            };
+            _alarmAutoStopTimer.Tick += (s, ev) => DismissAlarm();
 
             // Connect hook events if requested
             if (autoWireHook && _hook != null)
@@ -723,11 +731,14 @@ namespace TimeBomb.Core
         {
             IsAlarmActive = true;
             _sound.StartAlarmLoop();
+            _alarmAutoStopTimer.Stop();
+            _alarmAutoStopTimer.Start();
             OnAlarmTriggered?.Invoke();
         }
 
         public void DismissAlarm()
         {
+            _alarmAutoStopTimer.Stop();
             IsAlarmActive = false;
             _sound.StopAlarmLoop();
             OnAlarmDismissed?.Invoke();
@@ -736,6 +747,7 @@ namespace TimeBomb.Core
 
         public void ResetAlarm()
         {
+            _alarmAutoStopTimer.Stop();
             IsAlarmActive = false;
             _sound.StopAlarmLoop();
             OnAlarmDismissed?.Invoke();
