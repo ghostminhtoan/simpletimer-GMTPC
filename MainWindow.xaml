@@ -156,14 +156,14 @@
     </Window.Resources>
 
     <Border x:Name="RootBorder" 
-            Background="#E61E1E24" 
+            Background="#D81E1E24" 
             BorderBrush="#4423FF23" 
-            BorderThickness="1" 
+            BorderThickness="1.2" 
             CornerRadius="8" 
             SnapsToDevicePixels="True"
             Cursor="SizeAll">
         <Border.Effect>
-            <DropShadowEffect Color="#000000" BlurRadius="12" ShadowDepth="3" Opacity="0.8"/>
+            <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="4" Opacity="0.85"/>
         </Border.Effect>
 
         <Grid Margin="6,4,6,6">
@@ -179,8 +179,10 @@
                     VerticalAlignment="Top"
                     Margin="2,2,0,0"
                     Background="#2A23FF23"
-                    CornerRadius="3"
-                    Padding="3,1,3,1"
+                    BorderBrush="#3323FF23"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="4,1,4,1"
                     Visibility="Collapsed">
                 <TextBlock x:Name="TxtBadge"
                            Text="#1"
@@ -199,8 +201,8 @@
                     Background="#3323FF23"
                     BorderBrush="#6623FF23"
                     BorderThickness="1"
-                    CornerRadius="3"
-                    Padding="3,1,3,1"
+                    CornerRadius="4"
+                    Padding="4,1,4,1"
                     Visibility="Collapsed"
                     ToolTip="Click Through đang BẬT. Nhấn Ctrl + Chuột giữa vào HUD hoặc dùng Taskbar để tắt.">
                 <TextBlock Text="GHOST"
@@ -232,14 +234,14 @@
                 <TextBlock x:Name="TxtPrefix" 
                            Text="Ends at: " 
                            FontFamily="Segoe UI, Arial" 
-                           FontSize="12" 
+                           FontSize="11" 
                            FontWeight="SemiBold" 
                            Foreground="#A0FFA0"
                            Margin="0,0,3,0"/>
                 <TextBlock x:Name="TxtSubTime" 
                            Text="--:--:--" 
                            FontFamily="Segoe UI, Arial" 
-                           FontSize="12" 
+                           FontSize="11" 
                            FontWeight="Bold" 
                            Foreground="#A0FFA0"/>
             </StackPanel>
