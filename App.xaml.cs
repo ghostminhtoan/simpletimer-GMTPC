@@ -43,8 +43,27 @@ namespace TimeBomb
                         {
                             try
                             {
-                                if (isVisible) Window.Show();
-                                else Window.Hide();
+                                if (isVisible)
+                                {
+                                    Window.Show();
+                                    Window.WindowState = WindowState.Normal;
+                                    Window.ClampToScreen();
+                                }
+                                else
+                                {
+                                    if (Window.MinimizeKeepWorking)
+                                    {
+                                        // Giữ window visible để DWM / OBS capture tiếp tục nhận hình ảnh,
+                                        // đồng thời di chuyển off-screen sang toạ độ âm xa (-32000)
+                                        Window.Show();
+                                        Window.Left = -32000;
+                                        Window.Top = -32000;
+                                    }
+                                    else
+                                    {
+                                        Window.Hide();
+                                    }
+                                }
                             }
                             catch { }
                         });
