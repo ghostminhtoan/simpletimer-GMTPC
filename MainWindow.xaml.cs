@@ -30,6 +30,7 @@ namespace TimeBomb
         public bool IsActiveInstance { get; private set; } = false;
         public bool IsClickThrough { get; private set; } = false;
         public bool ShowSubInfo { get; private set; } = true;
+        public bool ObsHideStream { get; private set; } = false;
         public TimeBombManager Manager { get; set; }
 
         public event Action<MainWindow> OnActivatedByInteraction;
@@ -47,6 +48,9 @@ namespace TimeBomb
 
             _normalGlow = (DropShadowEffect)Resources["NormalGlow"];
             _redGlow = (DropShadowEffect)Resources["RedGlow"];
+
+            // Update window title for OBS Window Capture unique identification
+            Title = $"TimeBomb #{InstanceId}";
 
             // Load saved position and size
             Left = _settings.WindowX;
@@ -91,7 +95,22 @@ namespace TimeBomb
             SetWindowOpacity(_settings.Opacity);
             SetClickThrough(_settings.ClickThrough);
             SetShowSubInfo(_settings.ShowSubInfo);
+            SetObsHideStream(_settings.ObsHideStream);
             ClampToScreen();
+        }
+
+        public void SetObsHideStream(bool hide)
+        {
+            ObsHideStream = hide;
+            _settings.ObsHideStream = hide;
+            _settings.Save();
+
+            IntPtr handle = new WindowInteropHelper(this).Handle;
+            if (handle != IntPtr.Zero)
+            {
+                uint affinity = hide ? Win32Api.WDA_EXCLUDEFROMCAPTURE : Win32Api.WDA_NONE;
+                Win32Api.SetWindowDisplayAffinity(handle, affinity);
+            }
         }
 
         public void SetShowSubInfo(bool enable)
@@ -374,6 +393,16 @@ namespace TimeBomb
             };
             itemShowSubInfo.Click += (s, ev) => SetShowSubInfo(!ShowSubInfo);
             menu.Items.Add(itemShowSubInfo);
+
+            // OBS Hide from Stream option
+            var itemObsHide = new System.Windows.Controls.MenuItem
+            {
+                Header = ObsHideStream ? "✓ OBS: Ẩn khỏi Stream (Invisible on OBS)" : "OBS: Ẩn khỏi Stream (Invisible on OBS)",
+                Foreground = _greenBrush,
+                ToolTip = "Ẩn hẳn HUD khỏi OBS Capture / Discord Stream nhưng vẫn hiển thị trên màn hình thật của bạn"
+            };
+            itemObsHide.Click += (s, ev) => SetObsHideStream(!ObsHideStream);
+            menu.Items.Add(itemObsHide);
 
             // Opacity Slider Card
             var opacityCard = new System.Windows.Controls.Border

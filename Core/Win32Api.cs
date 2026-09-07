@@ -166,6 +166,15 @@ namespace TimeBomb.Core
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
+        #region OBS / Display Capture Affinity
+        public const uint WDA_NONE = 0x00000000;
+        public const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
+        #endregion
+
         public static void SetClickThrough(IntPtr hWnd, bool enable)
         {
             int exStyle = GetWindowLong(hWnd, GWL_EXSTYLE);

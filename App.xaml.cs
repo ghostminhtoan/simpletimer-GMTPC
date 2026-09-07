@@ -707,6 +707,16 @@ namespace TimeBomb
                 };
                 contextMenu.Items.Add(subItem);
 
+                var obsItem = new ToolStripMenuItem("🎥 OBS: Ẩn khỏi Stream (Invisible on OBS)");
+                obsItem.Checked = activeInst.Window.ObsHideStream;
+                obsItem.ToolTipText = "Ẩn hẳn HUD khỏi OBS Capture / Discord Stream nhưng vẫn hiện trên màn hình thật của bạn";
+                obsItem.Click += (s, ev) =>
+                {
+                    activeInst.Window.SetObsHideStream(!activeInst.Window.ObsHideStream);
+                    UpdateTrayIconMenu();
+                };
+                contextMenu.Items.Add(obsItem);
+
                 var opHeader = new ToolStripMenuItem($"🔆 Opacity: {(int)(activeInst.Window.Opacity * 100)}%") { Enabled = false };
                 opHeader.Font = new System.Drawing.Font(opHeader.Font, System.Drawing.FontStyle.Bold);
                 contextMenu.Items.Add(opHeader);
