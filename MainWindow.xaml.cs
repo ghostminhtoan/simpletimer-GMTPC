@@ -29,6 +29,7 @@ namespace TimeBomb
         public int InstanceId { get; set; } = 1;
         public bool IsActiveInstance { get; private set; } = false;
         public bool IsClickThrough { get; private set; } = false;
+        public bool ShowSubInfo { get; private set; } = true;
         public TimeBombManager Manager { get; set; }
 
         public event Action<MainWindow> OnActivatedByInteraction;
@@ -89,7 +90,20 @@ namespace TimeBomb
         {
             SetWindowOpacity(_settings.Opacity);
             SetClickThrough(_settings.ClickThrough);
+            SetShowSubInfo(_settings.ShowSubInfo);
             ClampToScreen();
+        }
+
+        public void SetShowSubInfo(bool enable)
+        {
+            ShowSubInfo = enable;
+            _settings.ShowSubInfo = enable;
+            _settings.Save();
+
+            if (SubInfoRow != null)
+            {
+                SubInfoRow.Visibility = enable ? Visibility.Visible : Visibility.Collapsed;
+            }
         }
 
         public void SetClickThrough(bool enable)
@@ -346,10 +360,20 @@ namespace TimeBomb
             {
                 Header = IsClickThrough ? "✓ Click Through (Bấm xuyên qua: BẬT)" : "Click Through (Bấm xuyên qua)",
                 Foreground = _greenBrush,
-                ToolTip = "Khi bật, nhấn Ctrl + Chuột giữa vào HUD để tắt"
+                ToolTip = "Khi bật, nhấn Ctrl + Chuột giữa vào HUD hoặc dùng Taskbar để tắt"
             };
             itemClickThrough.Click += (s, ev) => SetClickThrough(!IsClickThrough);
             menu.Items.Add(itemClickThrough);
+
+            // Show Start / End Time option
+            var itemShowSubInfo = new System.Windows.Controls.MenuItem
+            {
+                Header = ShowSubInfo ? "✓ Show Start / End Time (Hiện mốc thời gian)" : "Show Start / End Time (Hiện mốc thời gian)",
+                Foreground = _greenBrush,
+                ToolTip = "Bật / Tắt hiển thị mốc Ends at / Started at ở dòng phụ"
+            };
+            itemShowSubInfo.Click += (s, ev) => SetShowSubInfo(!ShowSubInfo);
+            menu.Items.Add(itemShowSubInfo);
 
             // Opacity Slider Card
             var opacityCard = new System.Windows.Controls.Border

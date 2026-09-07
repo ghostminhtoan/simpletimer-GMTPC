@@ -697,6 +697,16 @@ namespace TimeBomb
                 };
                 contextMenu.Items.Add(ctItem);
 
+                var subItem = new ToolStripMenuItem("⏰ Show Start / End Time (Hiện mốc thời gian)");
+                subItem.Checked = activeInst.Window.ShowSubInfo;
+                subItem.ToolTipText = "Bật / Tắt hiển thị mốc Ends at / Started at ở dòng phụ";
+                subItem.Click += (s, ev) =>
+                {
+                    activeInst.Window.SetShowSubInfo(!activeInst.Window.ShowSubInfo);
+                    UpdateTrayIconMenu();
+                };
+                contextMenu.Items.Add(subItem);
+
                 var opHeader = new ToolStripMenuItem($"🔆 Opacity: {(int)(activeInst.Window.Opacity * 100)}%") { Enabled = false };
                 opHeader.Font = new System.Drawing.Font(opHeader.Font, System.Drawing.FontStyle.Bold);
                 contextMenu.Items.Add(opHeader);
