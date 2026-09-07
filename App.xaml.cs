@@ -717,6 +717,16 @@ namespace TimeBomb
                 };
                 contextMenu.Items.Add(obsItem);
 
+                var obsCapItem = new ToolStripMenuItem("📹 OBS Capture Mode (Cho phép OBS nhận diện cửa sổ)");
+                obsCapItem.Checked = activeInst.Window.ShowInTaskbar;
+                obsCapItem.ToolTipText = "Bật tính năng này để OBS Window Capture và Game Capture tìm thấy cửa sổ TimeBomb";
+                obsCapItem.Click += (s, ev) =>
+                {
+                    activeInst.Window.SetTaskbarVisibility(!activeInst.Window.ShowInTaskbar);
+                    UpdateTrayIconMenu();
+                };
+                contextMenu.Items.Add(obsCapItem);
+
                 var opHeader = new ToolStripMenuItem($"🔆 Opacity: {(int)(activeInst.Window.Opacity * 100)}%") { Enabled = false };
                 opHeader.Font = new System.Drawing.Font(opHeader.Font, System.Drawing.FontStyle.Bold);
                 contextMenu.Items.Add(opHeader);

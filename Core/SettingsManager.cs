@@ -21,6 +21,7 @@ namespace TimeBomb.Core
         public bool ClickThrough { get; set; } = false;
         public bool ShowSubInfo { get; set; } = true;
         public bool ObsHideStream { get; set; } = false;
+        public bool ShowInTaskbar { get; set; } = false;
         public double Opacity { get; set; } = 1.0;
         public bool GamepadEnabled { get; set; } = true;
         public bool GamepadVibration { get; set; } = true;
@@ -163,6 +164,8 @@ namespace TimeBomb.Core
                         ShowSubInfo = subVal;
                     if (TryGetValue(sec, "obs_hide_stream", out string obsStr) && bool.TryParse(obsStr, out bool obsVal))
                         ObsHideStream = obsVal;
+                    if (TryGetValue(sec, "show_in_taskbar", out string tbStr) && bool.TryParse(tbStr, out bool tbVal))
+                        ShowInTaskbar = tbVal;
                     if (TryGetValue(sec, "opacity", out string opStr) && double.TryParse(opStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double op))
                         Opacity = Math.Max(0.2, Math.Min(1.0, op));
                 }
@@ -339,6 +342,7 @@ namespace TimeBomb.Core
                     SetValue(sec, "click_through", ClickThrough.ToString().ToLowerInvariant());
                     SetValue(sec, "show_sub_info", ShowSubInfo.ToString().ToLowerInvariant());
                     SetValue(sec, "obs_hide_stream", ObsHideStream.ToString().ToLowerInvariant());
+                    SetValue(sec, "show_in_taskbar", ShowInTaskbar.ToString().ToLowerInvariant());
                     SetValue(sec, "opacity", Opacity.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
 
                     if (InstanceId == 1)

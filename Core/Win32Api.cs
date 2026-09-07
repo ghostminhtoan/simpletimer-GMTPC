@@ -154,12 +154,20 @@ namespace TimeBomb.Core
         public static extern int joyGetPosEx(int uJoyID, ref JOYINFOEX pji);
         #endregion
 
-        public static void SetToolWindowAndNoActivate(IntPtr hWnd)
+        public static void SetToolWindowAndNoActivate(IntPtr hWnd, bool showInTaskbar = false)
         {
             int exStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
-            exStyle |= WS_EX_TOOLWINDOW;
+            if (!showInTaskbar)
+            {
+                exStyle |= WS_EX_TOOLWINDOW;
+            }
+            else
+            {
+                exStyle &= ~WS_EX_TOOLWINDOW;
+            }
             exStyle |= WS_EX_NOACTIVATE;
             SetWindowLong(hWnd, GWL_EXSTYLE, exStyle);
+            SetWindowPos(hWnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
         }
 
         [DllImport("user32.dll", SetLastError = true)]
