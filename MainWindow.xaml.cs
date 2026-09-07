@@ -31,8 +31,6 @@ namespace TimeBomb
         public bool IsClickThrough { get; private set; } = false;
         public bool ShowSubInfo { get; private set; } = true;
         public bool ObsHideStream { get; private set; } = false;
-        public new bool ShowInTaskbar { get; private set; } = false;
-        public bool MinimizeKeepWorking { get; private set; } = false;
         public TimeBombManager Manager { get; set; }
 
         public event Action<MainWindow> OnActivatedByInteraction;
@@ -85,7 +83,7 @@ namespace TimeBomb
         private void OnSourceInitialized(object sender, EventArgs e)
         {
             IntPtr handle = new WindowInteropHelper(this).Handle;
-            Win32Api.SetToolWindowAndNoActivate(handle, _settings.ShowInTaskbar);
+            Win32Api.SetToolWindowAndNoActivate(handle);
             if (IsClickThrough)
             {
                 Win32Api.SetClickThrough(handle, true);
@@ -97,30 +95,8 @@ namespace TimeBomb
             SetWindowOpacity(_settings.Opacity);
             SetClickThrough(_settings.ClickThrough);
             SetShowSubInfo(_settings.ShowSubInfo);
-            SetTaskbarVisibility(_settings.ShowInTaskbar);
             SetObsHideStream(_settings.ObsHideStream);
-            SetMinimizeKeepWorking(_settings.MinimizeKeepWorking);
             ClampToScreen();
-        }
-
-        public void SetMinimizeKeepWorking(bool enable)
-        {
-            MinimizeKeepWorking = enable;
-            _settings.MinimizeKeepWorking = enable;
-            _settings.Save();
-        }
-
-        public void SetTaskbarVisibility(bool showInTaskbar)
-        {
-            ShowInTaskbar = showInTaskbar;
-            _settings.ShowInTaskbar = showInTaskbar;
-            _settings.Save();
-
-            IntPtr handle = new WindowInteropHelper(this).Handle;
-            if (handle != IntPtr.Zero)
-            {
-                Win32Api.SetToolWindowAndNoActivate(handle, showInTaskbar);
-            }
         }
 
         public void SetObsHideStream(bool hide)
@@ -427,26 +403,6 @@ namespace TimeBomb
             };
             itemObsHide.Click += (s, ev) => SetObsHideStream(!ObsHideStream);
             menu.Items.Add(itemObsHide);
-
-            // OBS Window Capture Mode toggle
-            var itemObsMode = new System.Windows.Controls.MenuItem
-            {
-                Header = ShowInTaskbar ? "✓ OBS Capture Mode (Hiện Taskbar để OBS nhận diện: BẬT)" : "OBS Capture Mode (Bật để hiện trên OBS Window Capture)",
-                Foreground = _greenBrush,
-                ToolTip = "Khi bật, cửa sổ sẽ xuất hiện trong danh sách OBS Window Capture & Game Capture"
-            };
-            itemObsMode.Click += (s, ev) => SetTaskbarVisibility(!ShowInTaskbar);
-            menu.Items.Add(itemObsMode);
-
-            // Minimize and keep working in system tray toggle
-            var itemKeepWorking = new System.Windows.Controls.MenuItem
-            {
-                Header = MinimizeKeepWorking ? "✓ Minimize & Keep Working in System Tray: BẬT" : "Minimize and keep working in system tray",
-                Foreground = _greenBrush,
-                ToolTip = "Khi ẩn cửa sổ bằng Win + `, timer vẫn chạy ngầm liên tục và xuất hiện trong OBS Capture"
-            };
-            itemKeepWorking.Click += (s, ev) => SetMinimizeKeepWorking(!MinimizeKeepWorking);
-            menu.Items.Add(itemKeepWorking);
 
             // Opacity Slider Card
             var opacityCard = new System.Windows.Controls.Border

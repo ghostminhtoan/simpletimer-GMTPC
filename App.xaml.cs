@@ -43,27 +43,8 @@ namespace TimeBomb
                         {
                             try
                             {
-                                if (isVisible)
-                                {
-                                    Window.Show();
-                                    Window.WindowState = WindowState.Normal;
-                                    Window.ClampToScreen();
-                                }
-                                else
-                                {
-                                    if (Window.MinimizeKeepWorking)
-                                    {
-                                        // Giữ window visible để DWM / OBS capture tiếp tục nhận hình ảnh,
-                                        // đồng thời di chuyển off-screen sang toạ độ âm xa (-32000)
-                                        Window.Show();
-                                        Window.Left = -32000;
-                                        Window.Top = -32000;
-                                    }
-                                    else
-                                    {
-                                        Window.Hide();
-                                    }
-                                }
+                                if (isVisible) Window.Show();
+                                else Window.Hide();
                             }
                             catch { }
                         });
@@ -735,26 +716,6 @@ namespace TimeBomb
                     UpdateTrayIconMenu();
                 };
                 contextMenu.Items.Add(obsItem);
-
-                var obsCapItem = new ToolStripMenuItem("📹 OBS Capture Mode (Cho phép OBS nhận diện cửa sổ)");
-                obsCapItem.Checked = activeInst.Window.ShowInTaskbar;
-                obsCapItem.ToolTipText = "Bật tính năng này để OBS Window Capture và Game Capture tìm thấy cửa sổ TimeBomb";
-                obsCapItem.Click += (s, ev) =>
-                {
-                    activeInst.Window.SetTaskbarVisibility(!activeInst.Window.ShowInTaskbar);
-                    UpdateTrayIconMenu();
-                };
-                contextMenu.Items.Add(obsCapItem);
-
-                var keepWorkingItem = new ToolStripMenuItem("⚙️ Minimize and keep working in system tray");
-                keepWorkingItem.Checked = activeInst.Window.MinimizeKeepWorking;
-                keepWorkingItem.ToolTipText = "Khi bật, ẩn cửa sổ bằng Win + ` nhưng timer vẫn chạy ngầm và hiển thị trên OBS Capture";
-                keepWorkingItem.Click += (s, ev) =>
-                {
-                    activeInst.Window.SetMinimizeKeepWorking(!activeInst.Window.MinimizeKeepWorking);
-                    UpdateTrayIconMenu();
-                };
-                contextMenu.Items.Add(keepWorkingItem);
 
                 var opHeader = new ToolStripMenuItem($"🔆 Opacity: {(int)(activeInst.Window.Opacity * 100)}%") { Enabled = false };
                 opHeader.Font = new System.Drawing.Font(opHeader.Font, System.Drawing.FontStyle.Bold);
