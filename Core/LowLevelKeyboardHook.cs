@@ -140,49 +140,42 @@ namespace TimeBomb.Core
                                 OnToggleRequested?.Invoke();
                             }
                             ForceReleaseWinKey();
-                            return (IntPtr)1;
                         }
                         else if (CheckHotkeyMatch(_settings, "PauseToggle", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
                             _shortcutExecuted = true;
                             OnPauseToggleRequested?.Invoke();
                             ForceReleaseWinKey();
-                            return (IntPtr)1;
                         }
                         else if (CheckHotkeyMatch(_settings, "Reset", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
                             _shortcutExecuted = true;
                             OnResetRequested?.Invoke();
                             ForceReleaseWinKey();
-                            return (IntPtr)1;
                         }
                         else if (CheckHotkeyMatch(_settings, "SaveCountdown", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
                             _shortcutExecuted = true;
                             OnSaveRequested?.Invoke();
                             ForceReleaseWinKey();
-                            return (IntPtr)1;
                         }
                         else if (CheckHotkeyMatch(_settings, "SwitchMode", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
                             _shortcutExecuted = true;
                             OnSwitchModeRequested?.Invoke();
                             ForceReleaseWinKey();
-                            return (IntPtr)1;
                         }
                         else if (CheckHotkeyMatch(_settings, "NewInstance", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
                             _shortcutExecuted = true;
                             OnNewInstanceRequested?.Invoke();
                             ForceReleaseWinKey();
-                            return (IntPtr)1;
                         }
                         else if (CheckHotkeyMatch(_settings, "CloseInstance", vk, currentWin, currentCtrl, currentAlt, currentShift) || (currentWin && vk == Win32Api.VK_DELETE))
                         {
                             _shortcutExecuted = true;
                             OnCloseInstanceRequested?.Invoke();
                             ForceReleaseWinKey();
-                            return (IntPtr)1;
                         }
                         else if (CheckHotkeyMatch(_settings, "AdjustUp", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
@@ -192,7 +185,6 @@ namespace TimeBomb.Core
                                 _shortcutExecuted = true;
                                 OnAdjustUpStart?.Invoke();
                             }
-                            return (IntPtr)1;
                         }
                         else if (CheckHotkeyMatch(_settings, "AdjustDown", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
@@ -202,7 +194,6 @@ namespace TimeBomb.Core
                                 _shortcutExecuted = true;
                                 OnAdjustDownStart?.Invoke();
                             }
-                            return (IntPtr)1;
                         }
                     }
                     else if (isKeyUp)
@@ -215,14 +206,12 @@ namespace TimeBomb.Core
                             _isUpHeld = false;
                             OnAdjustUpStop?.Invoke();
                             ForceReleaseWinKey();
-                            return (IntPtr)1;
                         }
                         else if (vk == kDown && _isDownHeld)
                         {
                             _isDownHeld = false;
                             OnAdjustDownStop?.Invoke();
                             ForceReleaseWinKey();
-                            return (IntPtr)1;
                         }
                     }
                     else
