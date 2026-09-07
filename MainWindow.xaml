@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="TimeBomb"
         Width="180" Height="82"
-        MinWidth="130" MinHeight="60"
+        MinWidth="60" MinHeight="30"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"

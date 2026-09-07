@@ -51,8 +51,8 @@ namespace TimeBomb
             // Load saved position and size
             Left = _settings.WindowX;
             Top = _settings.WindowY;
-            if (_settings.WindowWidth >= 130) Width = _settings.WindowWidth;
-            if (_settings.WindowHeight >= 60) Height = _settings.WindowHeight;
+            if (_settings.WindowWidth >= 60) Width = _settings.WindowWidth;
+            if (_settings.WindowHeight >= 30) Height = _settings.WindowHeight;
 
             SourceInitialized += OnSourceInitialized;
             Loaded += OnLoaded;

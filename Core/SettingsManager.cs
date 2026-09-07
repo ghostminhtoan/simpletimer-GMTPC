@@ -145,9 +145,9 @@ namespace TimeBomb.Core
                     if (TryGetValue(sec, "y", out string yStr) && int.TryParse(yStr, out int y))
                         WindowY = y;
                     if (TryGetValue(sec, "width", out string wStr) && int.TryParse(wStr, out int wVal))
-                        WindowWidth = Math.Max(120, Math.Min(1200, wVal));
+                        WindowWidth = Math.Max(60, Math.Min(1200, wVal));
                     if (TryGetValue(sec, "height", out string hStr) && int.TryParse(hStr, out int hVal))
-                        WindowHeight = Math.Max(50, Math.Min(600, hVal));
+                        WindowHeight = Math.Max(30, Math.Min(600, hVal));
                     if (TryGetValue(sec, "mode", out string mode))
                         Mode = mode.ToLowerInvariant();
                     if (TryGetValue(sec, "LastSetMinutes", out string minsStr) && int.TryParse(minsStr, out int mins))
