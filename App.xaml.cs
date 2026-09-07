@@ -727,6 +727,16 @@ namespace TimeBomb
                 };
                 contextMenu.Items.Add(obsCapItem);
 
+                var keepWorkingItem = new ToolStripMenuItem("⚙️ Minimize and keep working in system tray");
+                keepWorkingItem.Checked = activeInst.Window.MinimizeKeepWorking;
+                keepWorkingItem.ToolTipText = "Khi bật, ẩn cửa sổ bằng Win + ` nhưng timer vẫn chạy ngầm và hiển thị trên OBS Capture";
+                keepWorkingItem.Click += (s, ev) =>
+                {
+                    activeInst.Window.SetMinimizeKeepWorking(!activeInst.Window.MinimizeKeepWorking);
+                    UpdateTrayIconMenu();
+                };
+                contextMenu.Items.Add(keepWorkingItem);
+
                 var opHeader = new ToolStripMenuItem($"🔆 Opacity: {(int)(activeInst.Window.Opacity * 100)}%") { Enabled = false };
                 opHeader.Font = new System.Drawing.Font(opHeader.Font, System.Drawing.FontStyle.Bold);
                 contextMenu.Items.Add(opHeader);

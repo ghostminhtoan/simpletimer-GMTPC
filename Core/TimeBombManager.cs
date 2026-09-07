@@ -181,6 +181,17 @@ namespace TimeBomb.Core
 
         public void Stop()
         {
+            if (_settings != null && _settings.MinimizeKeepWorking)
+            {
+                // Minimize & Keep Working in System Tray mode: Keep timers running in background
+                IsVisible = false;
+                _adjustingUp = false;
+                _adjustingDown = false;
+                _adjustTimer.Stop();
+                OnVisibilityToggled?.Invoke(false);
+                return;
+            }
+
             _tickTimer.Stop();
             _blinkTimer.Stop();
             _adjustTimer.Stop();
@@ -602,7 +613,7 @@ namespace TimeBomb.Core
         #region Ticks & Display
         private void OnBlinkTick(object sender, EventArgs e)
         {
-            if (!IsVisible) return;
+            if (!IsVisible && (_settings == null || !_settings.MinimizeKeepWorking)) return;
 
             if (IsPaused || (_isBelow10 && IsRunning))
             {
@@ -618,7 +629,7 @@ namespace TimeBomb.Core
 
         private void OnTick(object sender, EventArgs e)
         {
-            if (!IsVisible) return;
+            if (!IsVisible && (_settings == null || !_settings.MinimizeKeepWorking)) return;
 
             if (Mode == AppMode.Clock)
             {

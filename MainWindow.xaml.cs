@@ -31,6 +31,8 @@ namespace TimeBomb
         public bool IsClickThrough { get; private set; } = false;
         public bool ShowSubInfo { get; private set; } = true;
         public bool ObsHideStream { get; private set; } = false;
+        public new bool ShowInTaskbar { get; private set; } = false;
+        public bool MinimizeKeepWorking { get; private set; } = false;
         public TimeBombManager Manager { get; set; }
 
         public event Action<MainWindow> OnActivatedByInteraction;
@@ -97,7 +99,15 @@ namespace TimeBomb
             SetShowSubInfo(_settings.ShowSubInfo);
             SetTaskbarVisibility(_settings.ShowInTaskbar);
             SetObsHideStream(_settings.ObsHideStream);
+            SetMinimizeKeepWorking(_settings.MinimizeKeepWorking);
             ClampToScreen();
+        }
+
+        public void SetMinimizeKeepWorking(bool enable)
+        {
+            MinimizeKeepWorking = enable;
+            _settings.MinimizeKeepWorking = enable;
+            _settings.Save();
         }
 
         public void SetTaskbarVisibility(bool showInTaskbar)
@@ -427,6 +437,16 @@ namespace TimeBomb
             };
             itemObsMode.Click += (s, ev) => SetTaskbarVisibility(!ShowInTaskbar);
             menu.Items.Add(itemObsMode);
+
+            // Minimize and keep working in system tray toggle
+            var itemKeepWorking = new System.Windows.Controls.MenuItem
+            {
+                Header = MinimizeKeepWorking ? "✓ Minimize & Keep Working in System Tray: BẬT" : "Minimize and keep working in system tray",
+                Foreground = _greenBrush,
+                ToolTip = "Khi ẩn cửa sổ bằng Win + `, timer vẫn chạy ngầm liên tục và xuất hiện trong OBS Capture"
+            };
+            itemKeepWorking.Click += (s, ev) => SetMinimizeKeepWorking(!MinimizeKeepWorking);
+            menu.Items.Add(itemKeepWorking);
 
             // Opacity Slider Card
             var opacityCard = new System.Windows.Controls.Border
