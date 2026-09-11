@@ -112,6 +112,7 @@
     <Compile Include="Core\SettingsManager.cs" />
     <Compile Include="Core\GamepadManager.cs" />
     <Compile Include="Core\StartupManager.cs" />
+    <Compile Include="Core\VirtualDesktopManagerHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

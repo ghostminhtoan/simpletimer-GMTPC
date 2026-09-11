@@ -534,22 +534,8 @@ namespace TimeBomb
                 IntPtr handle = new WindowInteropHelper(this).Handle;
                 if (handle != IntPtr.Zero)
                 {
-                    Win32Api.SetForegroundWindow(handle);
+                    VirtualDesktopManagerHelper.MoveWindowToNextDesktop(handle);
                 }
-
-                // Programmatically trigger Windows Virtual Desktop navigation (Win + Ctrl + Right) upon menu click
-                System.Threading.Tasks.Task.Run(() =>
-                {
-                    System.Threading.Thread.Sleep(50);
-
-                    // Send Win + Ctrl + Right
-                    Win32Api.keybd_event((byte)Win32Api.VK_LWIN, 0, 0, UIntPtr.Zero);
-                    Win32Api.keybd_event((byte)Win32Api.VK_CONTROL, 0, 0, UIntPtr.Zero);
-                    Win32Api.keybd_event((byte)Win32Api.VK_RIGHT, 0, 0, UIntPtr.Zero);
-                    Win32Api.keybd_event((byte)Win32Api.VK_RIGHT, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
-                    Win32Api.keybd_event((byte)Win32Api.VK_CONTROL, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
-                    Win32Api.keybd_event((byte)Win32Api.VK_LWIN, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
-                });
             }
             catch { }
         }
