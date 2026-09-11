@@ -409,9 +409,9 @@ namespace TimeBomb
             // Move to Next Desktop option
             var itemMoveDesktop = new System.Windows.Controls.MenuItem
             {
-                Header = "🖥 Move to Next Desktop (Win + Ctrl + Right)",
+                Header = "🖥 Move to Next Desktop (Chuyển sang Virtual Desktop kế tiếp)",
                 Foreground = _greenBrush,
-                ToolTip = "Chuyển cửa sổ ứng dụng hiện tại sang Virtual Desktop kế tiếp"
+                ToolTip = "Tự động chuyển ứng dụng hiện tại sang màn hình ảo (Virtual Desktop) kế tiếp"
             };
             itemMoveDesktop.Click += (s, ev) => MoveToNextDesktop();
             menu.Items.Add(itemMoveDesktop);
@@ -537,13 +537,19 @@ namespace TimeBomb
                     Win32Api.SetForegroundWindow(handle);
                 }
 
-                // Send Win + Ctrl + Right shortcut to move current window/view to next desktop
-                Win32Api.keybd_event((byte)Win32Api.VK_LWIN, 0, 0, UIntPtr.Zero);
-                Win32Api.keybd_event((byte)Win32Api.VK_CONTROL, 0, 0, UIntPtr.Zero);
-                Win32Api.keybd_event((byte)Win32Api.VK_RIGHT, 0, 0, UIntPtr.Zero);
-                Win32Api.keybd_event((byte)Win32Api.VK_RIGHT, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
-                Win32Api.keybd_event((byte)Win32Api.VK_CONTROL, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
-                Win32Api.keybd_event((byte)Win32Api.VK_LWIN, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
+                // Programmatically trigger Windows Virtual Desktop navigation (Win + Ctrl + Right) upon menu click
+                System.Threading.Tasks.Task.Run(() =>
+                {
+                    System.Threading.Thread.Sleep(50);
+
+                    // Send Win + Ctrl + Right
+                    Win32Api.keybd_event((byte)Win32Api.VK_LWIN, 0, 0, UIntPtr.Zero);
+                    Win32Api.keybd_event((byte)Win32Api.VK_CONTROL, 0, 0, UIntPtr.Zero);
+                    Win32Api.keybd_event((byte)Win32Api.VK_RIGHT, 0, 0, UIntPtr.Zero);
+                    Win32Api.keybd_event((byte)Win32Api.VK_RIGHT, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
+                    Win32Api.keybd_event((byte)Win32Api.VK_CONTROL, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
+                    Win32Api.keybd_event((byte)Win32Api.VK_LWIN, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
+                });
             }
             catch { }
         }

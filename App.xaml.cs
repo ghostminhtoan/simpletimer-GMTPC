@@ -719,8 +719,8 @@ namespace TimeBomb
                 };
                 contextMenu.Items.Add(subItem);
 
-                var moveDeskItem = new ToolStripMenuItem("🖥 Move to Next Desktop (Win + Ctrl + Right)");
-                moveDeskItem.ToolTipText = "Chuyển cửa sổ ứng dụng hiện tại sang Virtual Desktop kế tiếp";
+                var moveDeskItem = new ToolStripMenuItem("🖥 Move to Next Desktop (Chuyển sang Virtual Desktop kế tiếp)");
+                moveDeskItem.ToolTipText = "Tự động chuyển ứng dụng hiện tại sang màn hình ảo (Virtual Desktop) kế tiếp";
                 moveDeskItem.Click += (s, ev) =>
                 {
                     activeInst.Window.MoveToNextDesktop();
