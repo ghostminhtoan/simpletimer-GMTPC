@@ -30,6 +30,8 @@ namespace TimeBomb.Core
         private bool IsWinKeyHeld => _hook != null && _hook.IsWinKeyHeld;
         public int TimerMinutes => _timerMinutes;
         public int TimerSeconds => _timerSeconds;
+        public int StopwatchMinutes => (int)(_stopwatchElapsedSeconds / 60);
+        public int StopwatchSeconds => (int)(_stopwatchElapsedSeconds % 60);
 
         // Timer mode state
         private int _timerMinutes = 3;
@@ -361,6 +363,27 @@ namespace TimeBomb.Core
             _blinkVisible = true;
             _tickTimer.Start();
             _blinkTimer.Start();
+
+            _sound.Play("adjust.wav");
+            UpdateDisplay();
+        }
+
+        public void SetStopwatchTime(int minutes, int seconds)
+        {
+            if (Mode != AppMode.Stopwatch) return;
+            int total = Math.Max(0, minutes * 60 + seconds);
+            if (total > 999 * 60 + 59) total = 999 * 60 + 59;
+
+            _stopwatchElapsedSeconds = total;
+            _stopwatchStartTime = DateTime.Now.AddSeconds(-_stopwatchElapsedSeconds);
+            _stopwatchFreshLaunch = false;
+
+            _blinkVisible = true;
+            if (IsVisible)
+            {
+                _tickTimer.Start();
+                _blinkTimer.Start();
+            }
 
             _sound.Play("adjust.wav");
             UpdateDisplay();

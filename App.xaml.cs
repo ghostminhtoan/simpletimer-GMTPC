@@ -545,7 +545,7 @@ namespace TimeBomb
                         for (int i = list.Length - 1; i >= 0; i--)
                         {
                             var inst = list[i];
-                            if (inst != null && inst.Window != null && inst.Window.IsVisible && inst.Window.IsClickThrough && inst.Window.IsPointInside(screenX, screenY))
+                            if (inst != null && inst.Window != null && inst.Window.IsVisible && inst.Window.IsPointInside(screenX, screenY))
                             {
                                 hit = inst;
                                 break;
@@ -554,9 +554,21 @@ namespace TimeBomb
 
                         if (hit != null && hit.Window != null)
                         {
-                            hit.Window.SetClickThrough(false);
-                            _soundManager?.Play("adjust.wav");
-                            UpdateTrayIconMenu();
+                            if (hit.Window.IsClickThrough)
+                            {
+                                hit.Window.SetClickThrough(false);
+                                UpdateTrayIconMenu();
+                            }
+
+                            if (hit.Manager != null && (hit.Manager.Mode == AppMode.Timer || hit.Manager.Mode == AppMode.Stopwatch))
+                            {
+                                hit.Window.OpenTimerInputDialog();
+                            }
+                            else
+                            {
+                                _soundManager?.Play("adjust.wav");
+                            }
+
                             suppress = true;
                         }
                     });

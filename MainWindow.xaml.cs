@@ -279,7 +279,7 @@ namespace TimeBomb
             if (e.ChangedButton == MouseButton.Middle)
             {
                 OnActivatedByInteraction?.Invoke(this);
-                if (Manager != null && Manager.Mode == AppMode.Timer)
+                if (Manager != null && (Manager.Mode == AppMode.Timer || Manager.Mode == AppMode.Stopwatch))
                 {
                     OpenTimerInputDialog();
                 }
@@ -288,10 +288,10 @@ namespace TimeBomb
 
         public void OpenTimerInputDialog()
         {
-            if (Manager == null || Manager.Mode != AppMode.Timer) return;
+            if (Manager == null || (Manager.Mode != AppMode.Timer && Manager.Mode != AppMode.Stopwatch)) return;
 
-            int currentMins = Manager.TimerMinutes;
-            int currentSecs = Manager.TimerSeconds;
+            int currentMins = Manager.Mode == AppMode.Timer ? Manager.TimerMinutes : Manager.StopwatchMinutes;
+            int currentSecs = Manager.Mode == AppMode.Timer ? Manager.TimerSeconds : Manager.StopwatchSeconds;
 
             var inputWindow = new TimerInputWindow(currentMins, currentSecs);
 
@@ -314,7 +314,14 @@ namespace TimeBomb
 
             inputWindow.OnTimeConfirmed += (mins, secs) =>
             {
-                Manager?.SetTimer(mins, secs);
+                if (Manager.Mode == AppMode.Timer)
+                {
+                    Manager.SetTimer(mins, secs);
+                }
+                else if (Manager.Mode == AppMode.Stopwatch)
+                {
+                    Manager.SetStopwatchTime(mins, secs);
+                }
             };
 
             inputWindow.Show();
