@@ -7,7 +7,7 @@
         WindowStyle="None"
         Background="#1E1E24"
         Topmost="True"
-        ShowInTaskbar="False"
+        ShowInTaskbar="True"
         ResizeMode="CanResizeWithGrip"
         WindowStartupLocation="Manual">
     <Window.Resources>
