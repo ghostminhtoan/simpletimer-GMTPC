@@ -12,6 +12,7 @@ namespace TimeBomb.Core
         private bool _shortcutExecuted = false;
         private bool _isUpHeld = false;
         private bool _isDownHeld = false;
+        private bool _suppressNextEscUp = false;
 
         private SettingsManager _settings;
 
@@ -131,8 +132,10 @@ namespace TimeBomb.Core
                         if (CheckHotkeyMatch(_settings, "IntervalTimer", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
                             _shortcutExecuted = true;
+                            _suppressNextEscUp = true;
                             OnIntervalToggleRequested?.Invoke();
                             ForceReleaseWinKey();
+                            return (IntPtr)1;
                         }
                         else if (CheckHotkeyMatch(_settings, "ToggleHUD", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
@@ -161,8 +164,10 @@ namespace TimeBomb.Core
                         else if (CheckHotkeyMatch(_settings, "SwitchMode", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
                             _shortcutExecuted = true;
+                            _suppressNextEscUp = true;
                             OnSwitchModeRequested?.Invoke();
                             ForceReleaseWinKey();
+                            return (IntPtr)1;
                         }
                         else if (CheckHotkeyMatch(_settings, "NewInstance", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
@@ -197,6 +202,14 @@ namespace TimeBomb.Core
                     }
                     else if (isKeyUp)
                     {
+                        uint kEsc = _settings != null ? _settings.KeySwitchMode : Win32Api.VK_ESCAPE;
+                        uint kInterval = _settings != null ? _settings.KeyIntervalTimer : Win32Api.VK_ESCAPE;
+                        if ((vk == Win32Api.VK_ESCAPE || vk == kEsc || vk == kInterval) && _suppressNextEscUp)
+                        {
+                            _suppressNextEscUp = false;
+                            return (IntPtr)1;
+                        }
+
                         uint kUp = _settings != null ? _settings.KeyAdjustUp : Win32Api.VK_UP;
                         uint kDown = _settings != null ? _settings.KeyAdjustDown : Win32Api.VK_DOWN;
 
