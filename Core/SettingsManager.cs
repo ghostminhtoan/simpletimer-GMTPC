@@ -81,12 +81,19 @@ namespace TimeBomb.Core
         public bool KeyAdjustDown_Shift { get; set; } = false;
         public uint KeyAdjustDown { get; set; } = Win32Api.VK_DOWN; // Down
 
+        public bool KeyIntervalTimer_Win { get; set; } = true;
+        public bool KeyIntervalTimer_Ctrl { get; set; } = true;
+        public bool KeyIntervalTimer_Alt { get; set; } = false;
+        public bool KeyIntervalTimer_Shift { get; set; } = false;
+        public uint KeyIntervalTimer { get; set; } = Win32Api.VK_ESCAPE; // Esc
+
         // Interval Timer settings
         public int IntervalPrepare { get; set; } = 5;
         public int IntervalWork { get; set; } = 30;
         public int IntervalRest { get; set; } = 10;
         public int IntervalEnd { get; set; } = 5;
         public int IntervalLoops { get; set; } = 3;
+        public bool IntervalInfinite { get; set; } = false;
         public int IntervalWindowX { get; set; } = 250;
         public int IntervalWindowY { get; set; } = 250;
 
@@ -217,6 +224,10 @@ namespace TimeBomb.Core
                     IntervalEnd = Math.Max(0, endVal);
                 if (TryGetValue("Interval", "Loops", out string loopsStr) && int.TryParse(loopsStr, out int loopsVal))
                     IntervalLoops = Math.Max(1, loopsVal);
+                if (TryGetValue("Interval", "Infinite", out string infStr) && bool.TryParse(infStr, out bool infVal))
+                    IntervalInfinite = infVal;
+                else
+                    IntervalInfinite = (IntervalLoops <= 0);
                 if (TryGetValue("Interval", "WindowX", out string ixStr) && int.TryParse(ixStr, out int ix))
                     IntervalWindowX = ix;
                 if (TryGetValue("Interval", "WindowY", out string iyStr) && int.TryParse(iyStr, out int iy))
@@ -226,6 +237,10 @@ namespace TimeBomb.Core
                 bool w = KeyToggleHUD_Win, c = KeyToggleHUD_Ctrl, a = KeyToggleHUD_Alt, s = KeyToggleHUD_Shift; uint k = KeyToggleHUD;
                 LoadHotkeyConfig("ToggleHUD", ref w, ref c, ref a, ref s, ref k);
                 KeyToggleHUD_Win = w; KeyToggleHUD_Ctrl = c; KeyToggleHUD_Alt = a; KeyToggleHUD_Shift = s; KeyToggleHUD = k;
+
+                w = KeyIntervalTimer_Win; c = KeyIntervalTimer_Ctrl; a = KeyIntervalTimer_Alt; s = KeyIntervalTimer_Shift; k = KeyIntervalTimer;
+                LoadHotkeyConfig("IntervalTimer", ref w, ref c, ref a, ref s, ref k);
+                KeyIntervalTimer_Win = w; KeyIntervalTimer_Ctrl = c; KeyIntervalTimer_Alt = a; KeyIntervalTimer_Shift = s; KeyIntervalTimer = k;
 
                 w = KeyPauseToggle_Win; c = KeyPauseToggle_Ctrl; a = KeyPauseToggle_Alt; s = KeyPauseToggle_Shift; k = KeyPauseToggle;
                 LoadHotkeyConfig("PauseToggle", ref w, ref c, ref a, ref s, ref k);
@@ -281,6 +296,7 @@ namespace TimeBomb.Core
         public void ResetHotkeysToDefault()
         {
             KeyToggleHUD_Win = true; KeyToggleHUD_Ctrl = false; KeyToggleHUD_Alt = false; KeyToggleHUD_Shift = false; KeyToggleHUD = Win32Api.VK_OEM_3;
+            KeyIntervalTimer_Win = true; KeyIntervalTimer_Ctrl = true; KeyIntervalTimer_Alt = false; KeyIntervalTimer_Shift = false; KeyIntervalTimer = Win32Api.VK_ESCAPE;
             KeyPauseToggle_Win = true; KeyPauseToggle_Ctrl = false; KeyPauseToggle_Alt = false; KeyPauseToggle_Shift = false; KeyPauseToggle = Win32Api.VK_SPACE;
             KeyReset_Win = true; KeyReset_Ctrl = false; KeyReset_Alt = false; KeyReset_Shift = false; KeyReset = Win32Api.VK_BACK;
             KeySaveCountdown_Win = true; KeySaveCountdown_Ctrl = false; KeySaveCountdown_Alt = false; KeySaveCountdown_Shift = false; KeySaveCountdown = Win32Api.VK_S;
@@ -364,10 +380,12 @@ namespace TimeBomb.Core
                         SetValue("Interval", "Rest", IntervalRest.ToString());
                         SetValue("Interval", "End", IntervalEnd.ToString());
                         SetValue("Interval", "Loops", IntervalLoops.ToString());
+                        SetValue("Interval", "Infinite", IntervalInfinite.ToString().ToLowerInvariant());
                         SetValue("Interval", "WindowX", IntervalWindowX.ToString());
                         SetValue("Interval", "WindowY", IntervalWindowY.ToString());
 
                         SaveHotkeyConfig("ToggleHUD", KeyToggleHUD_Win, KeyToggleHUD_Ctrl, KeyToggleHUD_Alt, KeyToggleHUD_Shift, KeyToggleHUD);
+                        SaveHotkeyConfig("IntervalTimer", KeyIntervalTimer_Win, KeyIntervalTimer_Ctrl, KeyIntervalTimer_Alt, KeyIntervalTimer_Shift, KeyIntervalTimer);
                         SaveHotkeyConfig("PauseToggle", KeyPauseToggle_Win, KeyPauseToggle_Ctrl, KeyPauseToggle_Alt, KeyPauseToggle_Shift, KeyPauseToggle);
                         SaveHotkeyConfig("Reset", KeyReset_Win, KeyReset_Ctrl, KeyReset_Alt, KeyReset_Shift, KeyReset);
                         SaveHotkeyConfig("SaveCountdown", KeySaveCountdown_Win, KeySaveCountdown_Ctrl, KeySaveCountdown_Alt, KeySaveCountdown_Shift, KeySaveCountdown);

@@ -23,6 +23,7 @@ namespace TimeBomb.Core
         public IntervalPhase CurrentPhase { get; private set; } = IntervalPhase.Idle;
         public int CurrentLoop { get; private set; } = 1;
         public int TotalLoops { get; set; } = 3;
+        public bool IsInfiniteLoops { get; set; } = false;
 
         public int PrepareSeconds { get; set; } = 5;
         public int WorkSeconds { get; set; } = 30;
@@ -54,6 +55,7 @@ namespace TimeBomb.Core
             RestSeconds = settings.IntervalRest;
             EndSeconds = settings.IntervalEnd;
             TotalLoops = settings.IntervalLoops;
+            IsInfiniteLoops = settings.IntervalInfinite || settings.IntervalLoops <= 0;
 
             _tickTimer = new DispatcherTimer(DispatcherPriority.Render)
             {
@@ -87,6 +89,7 @@ namespace TimeBomb.Core
             _settings.IntervalRest = RestSeconds;
             _settings.IntervalEnd = EndSeconds;
             _settings.IntervalLoops = TotalLoops;
+            _settings.IntervalInfinite = IsInfiniteLoops;
             _settings.Save();
         }
 
@@ -245,7 +248,7 @@ namespace TimeBomb.Core
                     }
                     else
                     {
-                        if (CurrentLoop < TotalLoops)
+                        if (IsInfiniteLoops || CurrentLoop < TotalLoops)
                         {
                             CurrentLoop++;
                             SwitchToPhase(IntervalPhase.Work, WorkSeconds);
@@ -260,7 +263,7 @@ namespace TimeBomb.Core
 
                 case IntervalPhase.Rest:
                     // After Rest -> Next Loop or End
-                    if (CurrentLoop < TotalLoops)
+                    if (IsInfiniteLoops || CurrentLoop < TotalLoops)
                     {
                         CurrentLoop++;
                         SwitchToPhase(IntervalPhase.Work, WorkSeconds);
@@ -305,7 +308,7 @@ namespace TimeBomb.Core
             {
                 mainText = "00:00";
                 phaseTitle = "INTERVAL TIMER";
-                loopInfoText = $"Loops: {TotalLoops}";
+                loopInfoText = IsInfiniteLoops ? "Loops: ∞ (Infinite)" : $"Loops: {TotalLoops}";
                 subText = $"P:{PrepareSeconds}s W:{WorkSeconds}s R:{RestSeconds}s E:{EndSeconds}s";
             }
             else if (CurrentPhase == IntervalPhase.Completed)
@@ -332,13 +335,13 @@ namespace TimeBomb.Core
                         break;
                     case IntervalPhase.Work:
                         phaseTitle = "WORK";
-                        loopInfoText = $"Loop {CurrentLoop} / {TotalLoops}";
-                        subText = RestSeconds > 0 ? $"Next: Rest ({RestSeconds}s)" : (CurrentLoop < TotalLoops ? $"Next: Work" : $"Next: End");
+                        loopInfoText = IsInfiniteLoops ? $"Loop {CurrentLoop} / ∞" : $"Loop {CurrentLoop} / {TotalLoops}";
+                        subText = RestSeconds > 0 ? $"Next: Rest ({RestSeconds}s)" : (IsInfiniteLoops || CurrentLoop < TotalLoops ? $"Next: Work" : $"Next: End");
                         break;
                     case IntervalPhase.Rest:
                         phaseTitle = "REST";
-                        loopInfoText = $"Loop {CurrentLoop} / {TotalLoops}";
-                        subText = CurrentLoop < TotalLoops ? $"Next: Work ({WorkSeconds}s)" : $"Next: End ({EndSeconds}s)";
+                        loopInfoText = IsInfiniteLoops ? $"Loop {CurrentLoop} / ∞" : $"Loop {CurrentLoop} / {TotalLoops}";
+                        subText = (IsInfiniteLoops || CurrentLoop < TotalLoops) ? $"Next: Work ({WorkSeconds}s)" : $"Next: End ({EndSeconds}s)";
                         break;
                     case IntervalPhase.End:
                         phaseTitle = "END";

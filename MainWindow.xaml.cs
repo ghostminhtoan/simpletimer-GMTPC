@@ -536,6 +536,8 @@ namespace TimeBomb
                 {
                     VirtualDesktopManagerHelper.MoveWindowToNextDesktop(handle);
                 }
+
+                ToastNotificationWindow.ShowToast("Bấm Windows + Tab để chuyển desktop nếu cần", 4.0);
             }
             catch { }
         }

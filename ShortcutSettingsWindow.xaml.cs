@@ -51,6 +51,11 @@ namespace TimeBomb
             });
             _items.Add(new ShortcutRowItem
             {
+                KeyName = "IntervalTimer", Description = "Interval Timer",
+                Win = _settings.KeyIntervalTimer_Win, Ctrl = _settings.KeyIntervalTimer_Ctrl, Alt = _settings.KeyIntervalTimer_Alt, Shift = _settings.KeyIntervalTimer_Shift, VkCode = _settings.KeyIntervalTimer
+            });
+            _items.Add(new ShortcutRowItem
+            {
                 KeyName = "PauseToggle", Description = "Pause / Resume",
                 Win = _settings.KeyPauseToggle_Win, Ctrl = _settings.KeyPauseToggle_Ctrl, Alt = _settings.KeyPauseToggle_Alt, Shift = _settings.KeyPauseToggle_Shift, VkCode = _settings.KeyPauseToggle
             });
@@ -215,6 +220,9 @@ namespace TimeBomb
                 {
                     case "ToggleHUD":
                         _settings.KeyToggleHUD_Win = w; _settings.KeyToggleHUD_Ctrl = c; _settings.KeyToggleHUD_Alt = a; _settings.KeyToggleHUD_Shift = s; _settings.KeyToggleHUD = vk;
+                        break;
+                    case "IntervalTimer":
+                        _settings.KeyIntervalTimer_Win = w; _settings.KeyIntervalTimer_Ctrl = c; _settings.KeyIntervalTimer_Alt = a; _settings.KeyIntervalTimer_Shift = s; _settings.KeyIntervalTimer = vk;
                         break;
                     case "PauseToggle":
                         _settings.KeyPauseToggle_Win = w; _settings.KeyPauseToggle_Ctrl = c; _settings.KeyPauseToggle_Alt = a; _settings.KeyPauseToggle_Shift = s; _settings.KeyPauseToggle = vk;

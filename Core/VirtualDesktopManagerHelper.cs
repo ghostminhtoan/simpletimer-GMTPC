@@ -176,8 +176,8 @@ namespace TimeBomb.Core
                                 catch { }
                             }
 
-                            // 2. Switch Windows view to that desktop
-                            _internalManager.SwitchDesktop(targetDesktop);
+                            // 2. Keep / return view to the original desktop
+                            _internalManager.SwitchDesktop(current);
                             return true;
                         }
                     }
@@ -185,7 +185,7 @@ namespace TimeBomb.Core
                 catch { }
             }
 
-            // Fallback for systems where internal COM might differ: simulate Win+Ctrl+D then Win+Ctrl+Right
+            // Fallback for systems where internal COM might differ: simulate Win+Ctrl+D then Win+Ctrl+Left
             FallbackSendKeys();
             return false;
         }
@@ -199,6 +199,16 @@ namespace TimeBomb.Core
                 Win32Api.keybd_event((byte)Win32Api.VK_CONTROL, 0, 0, UIntPtr.Zero);
                 Win32Api.keybd_event((byte)0x44, 0, 0, UIntPtr.Zero); // 0x44 = D
                 Win32Api.keybd_event((byte)0x44, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
+                Win32Api.keybd_event((byte)Win32Api.VK_CONTROL, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
+                Win32Api.keybd_event((byte)Win32Api.VK_LWIN, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
+
+                System.Threading.Thread.Sleep(50);
+
+                // Switch back to original desktop (Win + Ctrl + Left)
+                Win32Api.keybd_event((byte)Win32Api.VK_LWIN, 0, 0, UIntPtr.Zero);
+                Win32Api.keybd_event((byte)Win32Api.VK_CONTROL, 0, 0, UIntPtr.Zero);
+                Win32Api.keybd_event((byte)Win32Api.VK_LEFT, 0, 0, UIntPtr.Zero);
+                Win32Api.keybd_event((byte)Win32Api.VK_LEFT, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
                 Win32Api.keybd_event((byte)Win32Api.VK_CONTROL, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
                 Win32Api.keybd_event((byte)Win32Api.VK_LWIN, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
             }

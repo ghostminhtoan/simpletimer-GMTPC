@@ -75,6 +75,46 @@
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Padding" Value="4,2"/>
+            <Setter Property="CaretBrush" Value="#23FF23"/>
+        </Style>
+
+        <Style x:Key="CyberCheckBox" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="#23FF23"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border x:Name="chkBox"
+                                    Width="14" Height="14"
+                                    Background="#262630"
+                                    BorderBrush="#4423FF23"
+                                    BorderThickness="1"
+                                    CornerRadius="3"
+                                    Margin="0,0,3,0">
+                                <TextBlock x:Name="chkMark" Text="✓"
+                                           Foreground="#23FF23"
+                                           FontSize="10" FontWeight="Bold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Visibility="Collapsed"/>
+                            </Border>
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="chkMark" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="chkBox" Property="BorderBrush" Value="#23FF23"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="chkBox" Property="BorderBrush" Value="#66FF66"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
 
@@ -182,11 +222,15 @@
                         <!-- Row 1: Prepare & End -->
                         <StackPanel Grid.Row="0" Grid.Column="0" Margin="4,2">
                             <TextBlock Text="Prepare (sec)" FontSize="10" Foreground="#A0FFA0" Margin="0,0,0,2"/>
-                            <TextBox x:Name="TxtPrepare" Text="5" Style="{StaticResource CyberInput}"/>
+                            <TextBox x:Name="TxtPrepare" Text="5" Style="{StaticResource CyberInput}"
+                                     GotFocus="Input_GotFocus" PreviewMouseLeftButtonDown="Input_PreviewMouseLeftButtonDown"
+                                     PreviewMouseWheel="Input_PreviewMouseWheel" TextChanged="Input_TextChanged"/>
                         </StackPanel>
                         <StackPanel Grid.Row="0" Grid.Column="1" Margin="4,2">
                             <TextBlock Text="End (sec)" FontSize="10" Foreground="#A0FFA0" Margin="0,0,0,2"/>
-                            <TextBox x:Name="TxtEnd" Text="5" Style="{StaticResource CyberInput}"/>
+                            <TextBox x:Name="TxtEnd" Text="5" Style="{StaticResource CyberInput}"
+                                     GotFocus="Input_GotFocus" PreviewMouseLeftButtonDown="Input_PreviewMouseLeftButtonDown"
+                                     PreviewMouseWheel="Input_PreviewMouseWheel" TextChanged="Input_TextChanged"/>
                         </StackPanel>
 
                         <!-- Row 2: Work, Rest & Loops -->
@@ -199,18 +243,33 @@
 
                             <StackPanel Grid.Column="0" Margin="4,0">
                                 <TextBlock Text="Work (sec)" FontSize="10" Foreground="#23FF23" FontWeight="Bold" Margin="0,0,0,2"/>
-                                <TextBox x:Name="TxtWork" Text="30" Style="{StaticResource CyberInput}"/>
+                                <TextBox x:Name="TxtWork" Text="30" Style="{StaticResource CyberInput}"
+                                         GotFocus="Input_GotFocus" PreviewMouseLeftButtonDown="Input_PreviewMouseLeftButtonDown"
+                                         PreviewMouseWheel="Input_PreviewMouseWheel" TextChanged="Input_TextChanged"/>
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" Margin="4,0">
                                 <TextBlock Text="Rest (sec)" FontSize="10" Foreground="#FF9900" FontWeight="Bold" Margin="0,0,0,2"/>
-                                <TextBox x:Name="TxtRest" Text="10" Style="{StaticResource CyberInput}"/>
+                                <TextBox x:Name="TxtRest" Text="10" Style="{StaticResource CyberInput}"
+                                         GotFocus="Input_GotFocus" PreviewMouseLeftButtonDown="Input_PreviewMouseLeftButtonDown"
+                                         PreviewMouseWheel="Input_PreviewMouseWheel" TextChanged="Input_TextChanged"/>
                             </StackPanel>
 
-                            <StackPanel Grid.Column="2" Margin="4,0">
-                                <TextBlock Text="Loops" FontSize="10" Foreground="#A0FFA0" FontWeight="Bold" Margin="0,0,0,2"/>
-                                <TextBox x:Name="TxtLoops" Text="3" Style="{StaticResource CyberInput}"/>
-                            </StackPanel>
+                            <Grid Grid.Column="2" Margin="4,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <DockPanel Grid.Row="0" Margin="0,0,0,2" LastChildFill="False">
+                                    <TextBlock Text="Loops" FontSize="10" Foreground="#A0FFA0" FontWeight="Bold" DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                                    <CheckBox x:Name="ChkInfinite" Content="∞" Style="{StaticResource CyberCheckBox}"
+                                              DockPanel.Dock="Right" ToolTip="Infinite Loop (Lặp vô tận)"
+                                              Checked="ChkInfinite_Checked" Unchecked="ChkInfinite_Unchecked"/>
+                                </DockPanel>
+                                <TextBox x:Name="TxtLoops" Grid.Row="1" Text="3" Style="{StaticResource CyberInput}"
+                                         GotFocus="Input_GotFocus" PreviewMouseLeftButtonDown="Input_PreviewMouseLeftButtonDown"
+                                         PreviewMouseWheel="Input_PreviewMouseWheel" TextChanged="Input_TextChanged"/>
+                            </Grid>
                         </Grid>
                     </Grid>
                 </Border>

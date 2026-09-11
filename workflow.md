@@ -71,6 +71,7 @@ Tất cả phím tắt sử dụng tổ hợp phím **Win (Super/Meta)**:
 - `Win + Backspace` hoặc `Win + R`: Reset về mốc mặc định (hoặc tắt báo thức và reset nếu đang kêu).
 - `Win + S`: Lưu thời gian đếm ngược hiện tại làm mốc reset mặc định mới.
 - `Win + Esc`: Đổi chế độ xoay vòng: `Timer` ➔ `Stopwatch` ➔ `Clock`.
+- `Ctrl + Win + Esc`: Bật / Tắt cửa sổ Interval Timer.
 - `Win + Up`: Tăng timer thêm 1 phút (tự động tăng tốc độ khi giữ phím).
 - `Win + Down`: Giảm timer đi 1 phút (tối thiểu 1 phút, tự động tăng tốc độ khi giữ phím).
 - `Win + N`: Mở thêm Timer mới (Multi-Instance).

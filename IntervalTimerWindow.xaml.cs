@@ -51,7 +51,18 @@ namespace TimeBomb
             TxtWork.Text = Manager.WorkSeconds.ToString();
             TxtRest.Text = Manager.RestSeconds.ToString();
             TxtEnd.Text = Manager.EndSeconds.ToString();
-            TxtLoops.Text = Manager.TotalLoops.ToString();
+            if (Manager.IsInfiniteLoops)
+            {
+                ChkInfinite.IsChecked = true;
+                TxtLoops.Text = "∞";
+                TxtLoops.IsEnabled = false;
+            }
+            else
+            {
+                ChkInfinite.IsChecked = false;
+                TxtLoops.Text = Manager.TotalLoops.ToString();
+                TxtLoops.IsEnabled = true;
+            }
 
             Manager.OnDisplayChanged += (main, title, loopInfo, subText, isRed, isBlinkHidden) =>
             {
@@ -69,7 +80,6 @@ namespace TimeBomb
         private void OnSourceInitialized(object sender, EventArgs e)
         {
             IntPtr handle = new WindowInteropHelper(this).Handle;
-            Win32Api.SetToolWindowAndNoActivate(handle);
             if (IsClickThrough)
             {
                 Win32Api.SetClickThrough(handle, true);
@@ -94,6 +104,16 @@ namespace TimeBomb
 
         private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (e.OriginalSource is DependencyObject dep)
+            {
+                if (FindVisualParent<TextBox>(dep) != null ||
+                    FindVisualParent<Button>(dep) != null ||
+                    FindVisualParent<CheckBox>(dep) != null)
+                {
+                    return;
+                }
+            }
+
             if (e.ClickCount == 2)
             {
                 _isDragging = false;
@@ -106,6 +126,16 @@ namespace TimeBomb
                 _isDragging = true;
                 DragMove();
             }
+        }
+
+        private static T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+        {
+            while (child != null)
+            {
+                if (child is T parent) return parent;
+                child = VisualTreeHelper.GetParent(child);
+            }
+            return null;
         }
 
         private void OnMouseMove(object sender, MouseEventArgs e)
@@ -136,11 +166,124 @@ namespace TimeBomb
 
         private void ReadInputsToManager()
         {
+            if (Manager == null) return;
             if (int.TryParse(TxtPrepare.Text, out int prep)) Manager.PrepareSeconds = Math.Max(0, prep);
             if (int.TryParse(TxtWork.Text, out int work)) Manager.WorkSeconds = Math.Max(1, work);
             if (int.TryParse(TxtRest.Text, out int rest)) Manager.RestSeconds = Math.Max(0, rest);
             if (int.TryParse(TxtEnd.Text, out int endVal)) Manager.EndSeconds = Math.Max(0, endVal);
-            if (int.TryParse(TxtLoops.Text, out int loops)) Manager.TotalLoops = Math.Max(1, loops);
+
+            if (ChkInfinite != null && ChkInfinite.IsChecked == true)
+            {
+                Manager.IsInfiniteLoops = true;
+            }
+            else
+            {
+                string loopText = TxtLoops.Text.Trim().ToLowerInvariant();
+                if (loopText == "0" || loopText == "inf" || loopText == "infinite" || loopText == "∞")
+                {
+                    Manager.IsInfiniteLoops = true;
+                }
+                else if (int.TryParse(TxtLoops.Text, out int loops))
+                {
+                    Manager.IsInfiniteLoops = false;
+                    Manager.TotalLoops = Math.Max(1, loops);
+                }
+            }
+        }
+
+        private void Input_GotFocus(object sender, RoutedEventArgs e)
+        {
+            if (sender is TextBox tb)
+            {
+                tb.SelectAll();
+            }
+        }
+
+        private void Input_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is TextBox tb && !tb.IsKeyboardFocusWithin)
+            {
+                e.Handled = true;
+                tb.Focus();
+                tb.SelectAll();
+            }
+        }
+
+        private void Input_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (sender is TextBox tb)
+            {
+                if (tb == TxtLoops && ChkInfinite != null && ChkInfinite.IsChecked == true) return;
+
+                if (int.TryParse(tb.Text, out int val))
+                {
+                    int delta = e.Delta > 0 ? 1 : -1;
+                    int min = (tb == TxtWork || tb == TxtLoops) ? 1 : 0;
+                    int newVal = Math.Max(min, val + delta);
+                    tb.Text = newVal.ToString();
+                    tb.SelectAll();
+                    ReadInputsToManager();
+                    if (Manager != null && Manager.CurrentPhase == IntervalPhase.Idle)
+                    {
+                        Manager.UpdateDisplay();
+                    }
+                    e.Handled = true;
+                }
+            }
+        }
+
+        private void Input_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (sender == TxtLoops && ChkInfinite != null)
+            {
+                string t = TxtLoops.Text.Trim().ToLowerInvariant();
+                if (t == "0" || t == "inf" || t == "infinite" || t == "∞")
+                {
+                    if (ChkInfinite.IsChecked != true)
+                    {
+                        ChkInfinite.IsChecked = true;
+                        return;
+                    }
+                }
+                else if (int.TryParse(t, out int lp) && lp > 0)
+                {
+                    if (ChkInfinite.IsChecked == true)
+                    {
+                        ChkInfinite.IsChecked = false;
+                        return;
+                    }
+                }
+            }
+
+            ReadInputsToManager();
+            if (Manager != null && Manager.CurrentPhase == IntervalPhase.Idle)
+            {
+                Manager.UpdateDisplay();
+            }
+        }
+
+        private void ChkInfinite_Checked(object sender, RoutedEventArgs e)
+        {
+            if (Manager != null) Manager.IsInfiniteLoops = true;
+            TxtLoops.Text = "∞";
+            TxtLoops.IsEnabled = false;
+            ReadInputsToManager();
+            if (Manager != null && Manager.CurrentPhase == IntervalPhase.Idle)
+            {
+                Manager.UpdateDisplay();
+            }
+        }
+
+        private void ChkInfinite_Unchecked(object sender, RoutedEventArgs e)
+        {
+            if (Manager != null) Manager.IsInfiniteLoops = false;
+            TxtLoops.IsEnabled = true;
+            TxtLoops.Text = (Manager != null && Manager.TotalLoops > 0) ? Manager.TotalLoops.ToString() : "3";
+            ReadInputsToManager();
+            if (Manager != null && Manager.CurrentPhase == IntervalPhase.Idle)
+            {
+                Manager.UpdateDisplay();
+            }
         }
 
         private void BtnStart_Click(object sender, RoutedEventArgs e)
@@ -236,7 +379,7 @@ namespace TimeBomb
 
             var titleItem = new MenuItem
             {
-                Header = "Interval Timer (Ctrl + Win + `)",
+                Header = "Interval Timer (Ctrl + Win + Esc)",
                 IsEnabled = false,
                 FontWeight = FontWeights.Bold,
                 Foreground = new SolidColorBrush(Color.FromRgb(0xA0, 0xFF, 0xA0))

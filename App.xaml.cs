@@ -689,7 +689,7 @@ namespace TimeBomb
 
             contextMenu.Items.Add("New Timer (Win + N)", null, (s, ev) => CreateTimerInstance());
             contextMenu.Items.Add("Switch / Show Mode (Win + `)", null, (s, ev) => ToggleAll());
-            contextMenu.Items.Add("Interval Timer (Ctrl + Win + `)", null, (s, ev) => ToggleIntervalTimer());
+            contextMenu.Items.Add("Interval Timer (Ctrl + Win + Esc)", null, (s, ev) => ToggleIntervalTimer());
             contextMenu.Items.Add("Pause / Resume Active (Win + Enter)", null, (s, ev) => GetTargetInstance()?.Manager.PauseToggle());
             contextMenu.Items.Add("Reset Active (Win + Backspace)", null, (s, ev) => GetTargetInstance()?.Manager.Reset());
             contextMenu.Items.Add("Switch Mode Active (Win + Esc)", null, (s, ev) => GetTargetInstance()?.Manager.SwitchMode());

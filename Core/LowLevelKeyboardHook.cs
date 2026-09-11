@@ -128,17 +128,16 @@ namespace TimeBomb.Core
                     // Hotkey matching checking
                     if (isKeyDown)
                     {
-                        if (CheckHotkeyMatch(_settings, "ToggleHUD", vk, currentWin, currentCtrl, currentAlt, currentShift))
+                        if (CheckHotkeyMatch(_settings, "IntervalTimer", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
                             _shortcutExecuted = true;
-                            if (currentCtrl)
-                            {
-                                OnIntervalToggleRequested?.Invoke();
-                            }
-                            else
-                            {
-                                OnToggleRequested?.Invoke();
-                            }
+                            OnIntervalToggleRequested?.Invoke();
+                            ForceReleaseWinKey();
+                        }
+                        else if (CheckHotkeyMatch(_settings, "ToggleHUD", vk, currentWin, currentCtrl, currentAlt, currentShift))
+                        {
+                            _shortcutExecuted = true;
+                            OnToggleRequested?.Invoke();
                             ForceReleaseWinKey();
                         }
                         else if (CheckHotkeyMatch(_settings, "PauseToggle", vk, currentWin, currentCtrl, currentAlt, currentShift))
@@ -250,6 +249,7 @@ namespace TimeBomb.Core
             switch (name)
             {
                 case "ToggleHUD": reqWin = settings.KeyToggleHUD_Win; reqCtrl = settings.KeyToggleHUD_Ctrl; reqAlt = settings.KeyToggleHUD_Alt; reqShift = settings.KeyToggleHUD_Shift; reqVk = settings.KeyToggleHUD; break;
+                case "IntervalTimer": reqWin = settings.KeyIntervalTimer_Win; reqCtrl = settings.KeyIntervalTimer_Ctrl; reqAlt = settings.KeyIntervalTimer_Alt; reqShift = settings.KeyIntervalTimer_Shift; reqVk = settings.KeyIntervalTimer; break;
                 case "PauseToggle": reqWin = settings.KeyPauseToggle_Win; reqCtrl = settings.KeyPauseToggle_Ctrl; reqAlt = settings.KeyPauseToggle_Alt; reqShift = settings.KeyPauseToggle_Shift; reqVk = settings.KeyPauseToggle; break;
                 case "Reset": reqWin = settings.KeyReset_Win; reqCtrl = settings.KeyReset_Ctrl; reqAlt = settings.KeyReset_Alt; reqShift = settings.KeyReset_Shift; reqVk = settings.KeyReset; break;
                 case "SaveCountdown": reqWin = settings.KeySaveCountdown_Win; reqCtrl = settings.KeySaveCountdown_Ctrl; reqAlt = settings.KeySaveCountdown_Alt; reqShift = settings.KeySaveCountdown_Shift; reqVk = settings.KeySaveCountdown; break;
