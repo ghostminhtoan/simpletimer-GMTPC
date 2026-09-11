@@ -35,7 +35,9 @@ namespace TimeBomb.Core
         public const int VK_RETURN = 0x0D;   // Enter
         public const int VK_BACK = 0x08;     // Backspace
         public const int VK_ESCAPE = 0x1B;   // Escape
+        public const int VK_LEFT = 0x25;     // Arrow Left
         public const int VK_UP = 0x26;       // Arrow Up
+        public const int VK_RIGHT = 0x27;    // Arrow Right
         public const int VK_DOWN = 0x28;     // Arrow Down
         public const int VK_S = 0x53;        // S key
         public const int VK_N = 0x4E;        // N key (New Timer)

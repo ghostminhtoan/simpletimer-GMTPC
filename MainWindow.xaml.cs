@@ -406,15 +406,15 @@ namespace TimeBomb
             itemShowSubInfo.Click += (s, ev) => SetShowSubInfo(!ShowSubInfo);
             menu.Items.Add(itemShowSubInfo);
 
-            // OBS Hide from Stream option
-            var itemObsHide = new System.Windows.Controls.MenuItem
+            // Move to Next Desktop option
+            var itemMoveDesktop = new System.Windows.Controls.MenuItem
             {
-                Header = ObsHideStream ? "✓ OBS: Ẩn khỏi Stream (Invisible on OBS)" : "OBS: Ẩn khỏi Stream (Invisible on OBS)",
+                Header = "🖥 Move to Next Desktop (Win + Ctrl + Right)",
                 Foreground = _greenBrush,
-                ToolTip = "Ẩn hẳn HUD khỏi OBS Capture / Discord Stream nhưng vẫn hiển thị trên màn hình thật của bạn"
+                ToolTip = "Chuyển cửa sổ ứng dụng hiện tại sang Virtual Desktop kế tiếp"
             };
-            itemObsHide.Click += (s, ev) => SetObsHideStream(!ObsHideStream);
-            menu.Items.Add(itemObsHide);
+            itemMoveDesktop.Click += (s, ev) => MoveToNextDesktop();
+            menu.Items.Add(itemMoveDesktop);
 
             // Opacity Slider Card
             var opacityCard = new System.Windows.Controls.Border
@@ -523,6 +523,27 @@ namespace TimeBomb
                     _settings.WindowY = (int)Top;
                     _settings.Save();
                 }
+            }
+            catch { }
+        }
+
+        public void MoveToNextDesktop()
+        {
+            try
+            {
+                IntPtr handle = new WindowInteropHelper(this).Handle;
+                if (handle != IntPtr.Zero)
+                {
+                    Win32Api.SetForegroundWindow(handle);
+                }
+
+                // Send Win + Ctrl + Right shortcut to move current window/view to next desktop
+                Win32Api.keybd_event((byte)Win32Api.VK_LWIN, 0, 0, UIntPtr.Zero);
+                Win32Api.keybd_event((byte)Win32Api.VK_CONTROL, 0, 0, UIntPtr.Zero);
+                Win32Api.keybd_event((byte)Win32Api.VK_RIGHT, 0, 0, UIntPtr.Zero);
+                Win32Api.keybd_event((byte)Win32Api.VK_RIGHT, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
+                Win32Api.keybd_event((byte)Win32Api.VK_CONTROL, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
+                Win32Api.keybd_event((byte)Win32Api.VK_LWIN, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
             }
             catch { }
         }

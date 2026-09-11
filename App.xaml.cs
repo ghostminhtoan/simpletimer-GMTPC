@@ -719,15 +719,13 @@ namespace TimeBomb
                 };
                 contextMenu.Items.Add(subItem);
 
-                var obsItem = new ToolStripMenuItem("🎥 OBS: Ẩn khỏi Stream (Invisible on OBS)");
-                obsItem.Checked = activeInst.Window.ObsHideStream;
-                obsItem.ToolTipText = "Ẩn hẳn HUD khỏi OBS Capture / Discord Stream nhưng vẫn hiện trên màn hình thật của bạn";
-                obsItem.Click += (s, ev) =>
+                var moveDeskItem = new ToolStripMenuItem("🖥 Move to Next Desktop (Win + Ctrl + Right)");
+                moveDeskItem.ToolTipText = "Chuyển cửa sổ ứng dụng hiện tại sang Virtual Desktop kế tiếp";
+                moveDeskItem.Click += (s, ev) =>
                 {
-                    activeInst.Window.SetObsHideStream(!activeInst.Window.ObsHideStream);
-                    UpdateTrayIconMenu();
+                    activeInst.Window.MoveToNextDesktop();
                 };
-                contextMenu.Items.Add(obsItem);
+                contextMenu.Items.Add(moveDeskItem);
 
                 var opHeader = new ToolStripMenuItem($"🔆 Opacity: {(int)(activeInst.Window.Opacity * 100)}%") { Enabled = false };
                 opHeader.Font = new System.Drawing.Font(opHeader.Font, System.Drawing.FontStyle.Bold);

@@ -662,7 +662,7 @@ namespace TimeBomb.Core
                 return;
             }
 
-            bool isFrozen = (_adjustingUp || _adjustingDown || (IsWinKeyHeld && _startedWithWinHeld));
+            bool isFrozen = (_adjustingUp || _adjustingDown);
             if (isFrozen)
             {
                 if (Mode == AppMode.Stopwatch && _stopwatchFreshLaunch)
