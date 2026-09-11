@@ -794,6 +794,21 @@ namespace TimeBomb
                     UpdateTrayIconMenu();
                 };
                 contextMenu.Items.Add(vibItem);
+
+                var startupItem = new ToolStripMenuItem("🚀 Start with Windows (Khởi động cùng Windows)");
+                startupItem.Checked = _baseSettings.StartWithWindows;
+                startupItem.ToolTipText = "Tự động chạy ứng dụng khi khởi động hệ điều hành Windows";
+                startupItem.Click += (s, ev) =>
+                {
+                    bool newState = !_baseSettings.StartWithWindows;
+                    if (StartupManager.SetStartup(newState))
+                    {
+                        _baseSettings.StartWithWindows = newState;
+                        _baseSettings.Save();
+                    }
+                    UpdateTrayIconMenu();
+                };
+                contextMenu.Items.Add(startupItem);
                 contextMenu.Items.Add(new ToolStripSeparator());
             }
 

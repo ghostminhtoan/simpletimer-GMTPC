@@ -24,6 +24,7 @@ namespace TimeBomb.Core
         public double Opacity { get; set; } = 1.0;
         public bool GamepadEnabled { get; set; } = true;
         public bool GamepadVibration { get; set; } = true;
+        public bool StartWithWindows { get; set; } = false;
 
         // Custom Hotkeys Settings (Modifiers + Key VK)
         public bool KeyToggleHUD_Win { get; set; } = true;
@@ -201,6 +202,11 @@ namespace TimeBomb.Core
                 else
                     GamepadVibration = true;
 
+                if (TryGetValue("General", "start_with_windows", out string startStr) && bool.TryParse(startStr, out bool startVal))
+                    StartWithWindows = startVal;
+                else
+                    StartWithWindows = StartupManager.IsStartupEnabled();
+
                 if (TryGetValue("Interval", "Prepare", out string prepStr) && int.TryParse(prepStr, out int prep))
                     IntervalPrepare = Math.Max(0, prep);
                 if (TryGetValue("Interval", "Work", out string workStr) && int.TryParse(workStr, out int work))
@@ -346,6 +352,7 @@ namespace TimeBomb.Core
                         SetValue("Position", "x", WindowX.ToString());
                         SetValue("Position", "y", WindowY.ToString());
                         SetValue("General", "mode", Mode);
+                        SetValue("General", "start_with_windows", StartWithWindows.ToString().ToLowerInvariant());
                         SetValue("Timer", "LastSetMinutes", LastSetMinutes.ToString());
                         SetValue("Timer", "LastSetSeconds", LastSetSeconds.ToString());
                         SetValue("Window", "click_through", ClickThrough.ToString().ToLowerInvariant());
