@@ -92,6 +92,11 @@ namespace TimeBomb
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
+            IntPtr handle = new WindowInteropHelper(this).Handle;
+            if (handle != IntPtr.Zero)
+            {
+                Win32Api.SetToolWindowAndNoActivate(handle);
+            }
             SetWindowOpacity(_settings.Opacity);
             SetClickThrough(_settings.ClickThrough);
             SetShowSubInfo(_settings.ShowSubInfo);

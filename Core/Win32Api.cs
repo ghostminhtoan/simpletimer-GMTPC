@@ -157,7 +157,8 @@ namespace TimeBomb.Core
         public static void SetToolWindowAndNoActivate(IntPtr hWnd)
         {
             int exStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
-            // WS_EX_TOOLWINDOW is deliberately omitted so OBS Window Capture can discover the window title
+            // Ensure WS_EX_TOOLWINDOW is cleared so the window ALWAYS appears in Alt+Tab regardless of show/hide cycles
+            exStyle &= ~WS_EX_TOOLWINDOW;
             exStyle |= WS_EX_NOACTIVATE;
             SetWindowLong(hWnd, GWL_EXSTYLE, exStyle);
         }

@@ -22,7 +22,7 @@ namespace TimeBomb.Core
         public bool ShowSubInfo { get; set; } = true;
         public bool ObsHideStream { get; set; } = false;
         public double Opacity { get; set; } = 1.0;
-        public bool GamepadEnabled { get; set; } = true;
+        public bool GamepadEnabled { get; set; } = false;
         public bool GamepadVibration { get; set; } = true;
         public bool StartWithWindows { get; set; } = false;
 
@@ -195,7 +195,7 @@ namespace TimeBomb.Core
                 if (TryGetValue("Gamepad", "enabled", out string padEnabledStr) && bool.TryParse(padEnabledStr, out bool padEnabled))
                     GamepadEnabled = padEnabled;
                 else
-                    GamepadEnabled = true;
+                    GamepadEnabled = false;
 
                 if (TryGetValue("Gamepad", "vibration", out string padVibStr) && bool.TryParse(padVibStr, out bool padVib))
                     GamepadVibration = padVib;
