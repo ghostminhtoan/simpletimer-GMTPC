@@ -13,16 +13,22 @@ namespace TimeBomb
         private readonly SettingsManager _settings;
         private readonly SolidColorBrush _greenBrush = new SolidColorBrush(Color.FromRgb(0x23, 0xFF, 0x23));
         private readonly SolidColorBrush _redBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0x23, 0x23));
-        private readonly SolidColorBrush _activeBorder = new SolidColorBrush(Color.FromArgb(0xAA, 0x23, 0xFF, 0x23));
-        private readonly SolidColorBrush _inactiveBorder = new SolidColorBrush(Color.FromArgb(0x33, 0x23, 0xFF, 0x23));
-        private readonly SolidColorBrush _redBorder = new SolidColorBrush(Color.FromArgb(0x77, 0xFF, 0x23, 0x23));
-        private readonly SolidColorBrush _activeBadgeBg = new SolidColorBrush(Color.FromArgb(0x55, 0x23, 0xFF, 0x23));
+        private readonly SolidColorBrush _dimGreenBrush = new SolidColorBrush(Color.FromRgb(0x80, 0xFF, 0xA0));
+        private readonly SolidColorBrush _dimRedBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0x80, 0x80));
+        private readonly SolidColorBrush _ghostGreenBrush = new SolidColorBrush(Color.FromArgb(0x18, 0x23, 0xFF, 0x23));
+        private readonly SolidColorBrush _ghostRedBrush = new SolidColorBrush(Color.FromArgb(0x1C, 0xFF, 0x23, 0x23));
+        private readonly SolidColorBrush _activeBorder = new SolidColorBrush(Color.FromArgb(0xCC, 0x23, 0xFF, 0x23));
+        private readonly SolidColorBrush _inactiveBorder = new SolidColorBrush(Color.FromArgb(0x44, 0x23, 0xFF, 0x23));
+        private readonly SolidColorBrush _redBorder = new SolidColorBrush(Color.FromArgb(0xDD, 0xFF, 0x23, 0x23));
+        private readonly SolidColorBrush _activeBadgeBg = new SolidColorBrush(Color.FromArgb(0x44, 0x23, 0xFF, 0x23));
         private readonly SolidColorBrush _inactiveBadgeBg = new SolidColorBrush(Color.FromArgb(0x22, 0x66, 0x66, 0x66));
         private readonly SolidColorBrush _activeBadgeFg = new SolidColorBrush(Color.FromRgb(0x23, 0xFF, 0x23));
         private readonly SolidColorBrush _inactiveBadgeFg = new SolidColorBrush(Color.FromRgb(0x88, 0xAA, 0x88));
 
         private DropShadowEffect _normalGlow;
         private DropShadowEffect _redGlow;
+        private DropShadowEffect _reticleGlow;
+        private DropShadowEffect _reticleRedGlow;
         private bool _isDragging = false;
         private bool _isCurrentlyRed = false;
 
@@ -47,6 +53,8 @@ namespace TimeBomb
 
             _normalGlow = (DropShadowEffect)Resources["NormalGlow"];
             _redGlow = (DropShadowEffect)Resources["RedGlow"];
+            _reticleGlow = (DropShadowEffect)Resources["ReticleGlow"];
+            _reticleRedGlow = new DropShadowEffect { Color = Color.FromRgb(0xFF, 0x23, 0x23), BlurRadius = 8, ShadowDepth = 0, Opacity = 0.85 };
 
             // Update window title for OBS Window Capture unique identification
             Title = $"TimeBomb #{InstanceId}";
@@ -157,9 +165,14 @@ namespace TimeBomb
             if (!_isCurrentlyRed)
             {
                 RootBorder.BorderBrush = isActive ? _activeBorder : _inactiveBorder;
+                var bracketBrush = isActive ? _greenBrush : _inactiveBorder;
+                if (BracketTL != null) BracketTL.Stroke = bracketBrush;
+                if (BracketTR != null) BracketTR.Stroke = bracketBrush;
+                if (BracketBL != null) BracketBL.Stroke = bracketBrush;
+                if (BracketBR != null) BracketBR.Stroke = bracketBrush;
             }
 
-            if (BadgeBorder.Visibility == Visibility.Visible)
+            if (BadgeBorder != null && BadgeBorder.Visibility == Visibility.Visible)
             {
                 BadgeBorder.Background = isActive ? _activeBadgeBg : _inactiveBadgeBg;
                 TxtBadge.Foreground = isActive ? _activeBadgeFg : _inactiveBadgeFg;
@@ -185,20 +198,76 @@ namespace TimeBomb
             TxtPrefix.Text = prefixText;
             TxtSubTime.Text = subText;
 
+            // Synchronize Cyberpunk Ghost 7-segment backlight display (88:88 or 88:88:88)
+            if (TxtGhostTime != null)
+            {
+                TxtGhostTime.Text = mainText != null && mainText.Length > 5 ? "88:88:88" : "88:88";
+                TxtGhostTime.Foreground = isRed ? _ghostRedBrush : _ghostGreenBrush;
+            }
+
             if (isRed)
             {
                 TxtMainTime.Foreground = _redBrush;
                 TxtMainTime.Effect = _redGlow;
                 RootBorder.BorderBrush = _redBorder;
+
+                if (BracketTL != null) { BracketTL.Stroke = _redBrush; BracketTL.Effect = _reticleRedGlow; }
+                if (BracketTR != null) { BracketTR.Stroke = _redBrush; BracketTR.Effect = _reticleRedGlow; }
+                if (BracketBL != null) { BracketBL.Stroke = _redBrush; BracketBL.Effect = _reticleRedGlow; }
+                if (BracketBR != null) { BracketBR.Stroke = _redBrush; BracketBR.Effect = _reticleRedGlow; }
+
+                if (StatusLedDot != null) StatusLedDot.Fill = _redBrush;
+                if (SignalBar1 != null) SignalBar1.Fill = _redBrush;
+                if (SignalBar2 != null) SignalBar2.Fill = _redBrush;
+                if (SignalBar3 != null) SignalBar3.Fill = _redBrush;
+                if (TxtSubTime != null) TxtSubTime.Foreground = _redBrush;
+
+                if (TxtHeaderTitle != null)
+                {
+                    TxtHeaderTitle.Text = "SYS.ALERT // CRITICAL";
+                    TxtHeaderTitle.Foreground = _dimRedBrush;
+                }
             }
             else
             {
                 TxtMainTime.Foreground = _greenBrush;
                 TxtMainTime.Effect = _normalGlow;
                 RootBorder.BorderBrush = IsActiveInstance ? _activeBorder : _inactiveBorder;
+
+                var bracketBrush = IsActiveInstance ? _greenBrush : _inactiveBorder;
+                if (BracketTL != null) { BracketTL.Stroke = bracketBrush; BracketTL.Effect = _reticleGlow; }
+                if (BracketTR != null) { BracketTR.Stroke = bracketBrush; BracketTR.Effect = _reticleGlow; }
+                if (BracketBL != null) { BracketBL.Stroke = bracketBrush; BracketBL.Effect = _reticleGlow; }
+                if (BracketBR != null) { BracketBR.Stroke = bracketBrush; BracketBR.Effect = _reticleGlow; }
+
+                if (StatusLedDot != null) StatusLedDot.Fill = _greenBrush;
+                if (SignalBar1 != null) SignalBar1.Fill = _greenBrush;
+                if (SignalBar2 != null) SignalBar2.Fill = _greenBrush;
+                if (SignalBar3 != null) SignalBar3.Fill = _greenBrush;
+                if (TxtSubTime != null) TxtSubTime.Foreground = _greenBrush;
+
+                if (TxtHeaderTitle != null)
+                {
+                    string modeStr = "TIMER";
+                    if (Manager != null)
+                    {
+                        switch (Manager.Mode)
+                        {
+                            case AppMode.Stopwatch: modeStr = "CHRONO"; break;
+                            case AppMode.Clock: modeStr = "CLOCK"; break;
+                            default: modeStr = "TIMER"; break;
+                        }
+                    }
+                    TxtHeaderTitle.Text = $"SYS.HUD // {modeStr}";
+                    TxtHeaderTitle.Foreground = _dimGreenBrush;
+                }
             }
 
             TxtMainTime.Opacity = isBlinkHidden ? 0.0 : 1.0;
+            if (StatusLedDot != null)
+            {
+                StatusLedDot.Opacity = isBlinkHidden ? 0.2 : 1.0;
+            }
         }
 
         private void OnMouseEnter(object sender, MouseEventArgs e)

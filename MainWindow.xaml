@@ -5,7 +5,7 @@
         Width="180" Height="82"
         MinWidth="60" MinHeight="30"
         WindowStyle="None"
-        Background="#1E1E24"
+        Background="#0E1015"
         Topmost="True"
         ShowInTaskbar="True"
         ResizeMode="CanResizeWithGrip"
@@ -17,15 +17,16 @@
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
     <Window.Resources>
-        <!-- Glow Effect for Normal State -->
-        <DropShadowEffect x:Key="NormalGlow" Color="#23FF23" BlurRadius="10" ShadowDepth="0" Opacity="0.5"/>
-        <DropShadowEffect x:Key="RedGlow" Color="#FF2323" BlurRadius="12" ShadowDepth="0" Opacity="0.75"/>
+        <!-- Glow Effects -->
+        <DropShadowEffect x:Key="NormalGlow" Color="#23FF23" BlurRadius="12" ShadowDepth="0" Opacity="0.75"/>
+        <DropShadowEffect x:Key="RedGlow" Color="#FF2323" BlurRadius="14" ShadowDepth="0" Opacity="0.85"/>
+        <DropShadowEffect x:Key="ReticleGlow" Color="#23FF23" BlurRadius="6" ShadowDepth="0" Opacity="0.8"/>
 
-        <!-- Cyberpunk Context Menu Style (Fixes white icon strip) -->
+        <!-- Cyberpunk Context Menu Style -->
         <Style TargetType="ContextMenu">
-            <Setter Property="Background" Value="#1E1E24"/>
+            <Setter Property="Background" Value="#12141C"/>
             <Setter Property="BorderBrush" Value="#23FF23"/>
-            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderThickness" Value="1.2"/>
             <Setter Property="Foreground" Value="#23FF23"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -33,10 +34,10 @@
                         <Border Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6"
+                                CornerRadius="5"
                                 Padding="4">
                             <Border.Effect>
-                                <DropShadowEffect Color="#000000" BlurRadius="12" ShadowDepth="3" Opacity="0.8"/>
+                                <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="4" Opacity="0.9"/>
                             </Border.Effect>
                             <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
                         </Border>
@@ -57,7 +58,7 @@
                     <ControlTemplate TargetType="MenuItem">
                         <Border x:Name="Border" 
                                 Background="{TemplateBinding Background}" 
-                                CornerRadius="4" 
+                                CornerRadius="3" 
                                 Padding="{TemplateBinding Padding}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -71,9 +72,9 @@
                                        Placement="Right" 
                                        Focusable="False" 
                                        AllowsTransparency="True">
-                                    <Border Background="#1E1E24" BorderBrush="#23FF23" BorderThickness="1" CornerRadius="6" Padding="4">
+                                    <Border Background="#12141C" BorderBrush="#23FF23" BorderThickness="1.2" CornerRadius="5" Padding="4">
                                         <Border.Effect>
-                                            <DropShadowEffect Color="#000000" BlurRadius="12" ShadowDepth="3" Opacity="0.8"/>
+                                            <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="4" Opacity="0.9"/>
                                         </Border.Effect>
                                         <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
                                     </Border>
@@ -119,8 +120,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Slider">
                         <Grid VerticalAlignment="Center">
-                            <!-- Track line background -->
-                            <Border Height="4" Background="#353540" CornerRadius="2" VerticalAlignment="Center"/>
+                            <Border Height="4" Background="#262A36" CornerRadius="2" VerticalAlignment="Center"/>
                             <Track x:Name="PART_Track">
                                 <Track.DecreaseRepeatButton>
                                     <RepeatButton Command="Slider.DecreaseLarge">
@@ -135,7 +135,7 @@
                                     <Thumb>
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
-                                                <Ellipse Width="14" Height="14" Fill="#23FF23" Stroke="#1E1E24" StrokeThickness="1.5">
+                                                <Ellipse Width="14" Height="14" Fill="#23FF23" Stroke="#12141C" StrokeThickness="1.5">
                                                     <Ellipse.Effect>
                                                         <DropShadowEffect Color="#23FF23" BlurRadius="6" ShadowDepth="0" Opacity="0.8"/>
                                                     </Ellipse.Effect>
@@ -162,98 +162,169 @@
     </Window.Resources>
 
     <Border x:Name="RootBorder" 
-            Background="#D81E1E24" 
-            BorderBrush="#4423FF23" 
+            BorderBrush="#5523FF23" 
             BorderThickness="1.2" 
-            CornerRadius="8" 
+            CornerRadius="7" 
             SnapsToDevicePixels="True"
             Cursor="SizeAll">
+        <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Color="#E8161922" Offset="0.0"/>
+                <GradientStop Color="#F40C0E14" Offset="1.0"/>
+            </LinearGradientBrush>
+        </Border.Background>
         <Border.Effect>
-            <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="4" Opacity="0.85"/>
+            <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="3" Opacity="0.85"/>
         </Border.Effect>
 
-        <Grid Margin="6,4,6,6">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+        <Grid>
+            <!-- Background Subtle Inner Tech Frame -->
+            <Border BorderBrush="#1223FF23" BorderThickness="1" Margin="2" CornerRadius="5" IsHitTestVisible="False"/>
 
-            <!-- Instance Badge -->
-            <Border x:Name="BadgeBorder"
-                    Grid.Row="0"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Top"
-                    Margin="2,2,0,0"
-                    Background="#2A23FF23"
-                    BorderBrush="#3323FF23"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Padding="4,1,4,1"
-                    Panel.ZIndex="10"
-                    Visibility="Collapsed">
-                <TextBlock x:Name="TxtBadge"
-                           Text="#1"
-                           FontFamily="Segoe UI, Arial"
-                           FontSize="9"
-                           FontWeight="Bold"
-                           Foreground="#80FFA0"/>
-            </Border>
+            <!-- Cyberpunk HUD 4-Corner Reticles / Brackets -->
+            <Path x:Name="BracketTL" Data="M 0,9 L 0,0 L 9,0" Stroke="#23FF23" StrokeThickness="1.5" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2,2,0,0" Effect="{StaticResource ReticleGlow}" IsHitTestVisible="False"/>
+            <Path x:Name="BracketTR" Data="M 0,0 L 9,0 L 9,9" Stroke="#23FF23" StrokeThickness="1.5" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0" Effect="{StaticResource ReticleGlow}" IsHitTestVisible="False"/>
+            <Path x:Name="BracketBL" Data="M 0,0 L 0,9 L 9,9" Stroke="#23FF23" StrokeThickness="1.5" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="2,0,0,2" Effect="{StaticResource ReticleGlow}" IsHitTestVisible="False"/>
+            <Path x:Name="BracketBR" Data="M 9,0 L 9,9 L 0,9" Stroke="#23FF23" StrokeThickness="1.5" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,2,2" Effect="{StaticResource ReticleGlow}" IsHitTestVisible="False"/>
 
-            <!-- Ghost / Click Through Indicator -->
-            <Border x:Name="GhostBadge"
-                    Grid.Row="0"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Top"
-                    Margin="0,2,2,0"
-                    Background="#3323FF23"
-                    BorderBrush="#6623FF23"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Padding="4,1,4,1"
-                    Panel.ZIndex="10"
-                    Visibility="Collapsed"
-                    ToolTip="Click Through đang BẬT. Nhấn Ctrl + Chuột giữa vào HUD hoặc dùng Taskbar để tắt.">
-                <TextBlock Text="GHOST"
-                           FontFamily="Segoe UI, Arial"
-                           FontSize="8"
-                           FontWeight="Bold"
-                           Foreground="#80FFA0"/>
-            </Border>
+            <!-- Main Layout Grid -->
+            <Grid Margin="6,4,6,5">
+                <Grid.RowDefinitions>
+                    <!-- Header Telemetry Bar -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- Main Digital Readout -->
+                    <RowDefinition Height="*"/>
+                    <!-- Sub Info Row -->
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-            <!-- Main Time Display wrapped in Viewbox for Auto-Resize / Responsive Scaling -->
-            <Viewbox Grid.Row="0" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock x:Name="TxtMainTime" 
-                           Text="00:00"
-                           FontFamily="pack://application:,,,/Resources/Fonts/#DS-Digital, Consolas, Courier New"
-                           FontSize="38"
-                           FontWeight="Bold"
-                           Foreground="#23FF23"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           Effect="{StaticResource NormalGlow}"
-                           SnapsToDevicePixels="True"/>
-            </Viewbox>
+                <!-- Top Telemetry Row -->
+                <Viewbox Grid.Row="0" Stretch="Uniform" HorizontalAlignment="Stretch" MaxHeight="14" Margin="3,0,3,1">
+                    <DockPanel LastChildFill="False" MinWidth="160">
+                        <!-- Left: Status Pulse LED + System Title + Instance Badge -->
+                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse x:Name="StatusLedDot" Width="5" Height="5" Fill="#23FF23" Margin="0,0,4,0" VerticalAlignment="Center">
+                                <Ellipse.Effect>
+                                    <DropShadowEffect Color="#23FF23" BlurRadius="4" ShadowDepth="0" Opacity="0.8"/>
+                                </Ellipse.Effect>
+                            </Ellipse>
+                            <TextBlock x:Name="TxtHeaderTitle" 
+                                       Text="SYS.HUD // TIMER" 
+                                       FontFamily="Consolas, Segoe UI, Arial" 
+                                       FontSize="8" 
+                                       FontWeight="Bold" 
+                                       Foreground="#80FFA0" 
+                                       VerticalAlignment="Center" 
+                                       Margin="0,0,5,0"/>
 
-            <!-- Bottom Sub Info Row wrapped in Viewbox -->
-            <Viewbox x:Name="SubInfoRow" Grid.Row="1" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-1,0,0" MaxHeight="24">
-                <StackPanel Orientation="Horizontal" 
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center">
-                    <TextBlock x:Name="TxtPrefix" 
-                               Text="Ends at: " 
-                               FontFamily="Segoe UI, Arial" 
-                               FontSize="11" 
-                               FontWeight="SemiBold" 
-                               Foreground="#A0FFA0"
-                               Margin="0,0,3,0"/>
-                    <TextBlock x:Name="TxtSubTime" 
-                               Text="--:--:--" 
-                               FontFamily="Segoe UI, Arial" 
-                               FontSize="11" 
-                               FontWeight="Bold" 
-                               Foreground="#A0FFA0"/>
-                </StackPanel>
-            </Viewbox>
+                            <!-- Instance Badge -->
+                            <Border x:Name="BadgeBorder"
+                                    Background="#2A23FF23"
+                                    BorderBrush="#5523FF23"
+                                    BorderThickness="1"
+                                    CornerRadius="3"
+                                    Padding="3,0,3,1"
+                                    VerticalAlignment="Center"
+                                    Visibility="Collapsed">
+                                <TextBlock x:Name="TxtBadge"
+                                           Text="#1"
+                                           FontFamily="Consolas, Segoe UI"
+                                           FontSize="7.5"
+                                           FontWeight="Bold"
+                                           Foreground="#80FFA0"/>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Right: Signal / Telemetry bars + Ghost Indicator -->
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- Click Through Ghost Badge -->
+                            <Border x:Name="GhostBadge"
+                                    Background="#3323FF23"
+                                    BorderBrush="#6623FF23"
+                                    BorderThickness="1"
+                                    CornerRadius="3"
+                                    Padding="4,0,4,1"
+                                    Margin="0,0,4,0"
+                                    VerticalAlignment="Center"
+                                    Visibility="Collapsed"
+                                    ToolTip="Click Through đang BẬT. Nhấn Ctrl + Chuột giữa vào HUD hoặc dùng Taskbar để tắt.">
+                                <TextBlock Text="GHOST"
+                                           FontFamily="Consolas, Segoe UI"
+                                           FontSize="7"
+                                           FontWeight="Bold"
+                                           Foreground="#80FFA0"/>
+                            </Border>
+
+                            <!-- Cyber Telemetry Signal Bars -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="2,0,0,0">
+                                <Rectangle x:Name="SignalBar1" Width="2" Height="4" Fill="#23FF23" Margin="1,0,0,0" RadiusX="0.5" RadiusY="0.5"/>
+                                <Rectangle x:Name="SignalBar2" Width="2" Height="6" Fill="#23FF23" Margin="1,0,0,0" RadiusX="0.5" RadiusY="0.5"/>
+                                <Rectangle x:Name="SignalBar3" Width="2" Height="8" Fill="#23FF23" Margin="1,0,0,0" RadiusX="0.5" RadiusY="0.5"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </DockPanel>
+                </Viewbox>
+
+                <!-- Main Time Display wrapped in Viewbox with LCD Ghost Segment Backlight -->
+                <Viewbox Grid.Row="1" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,1,0,1">
+                    <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <!-- Ghost 7-segment Backlight (LCD/VFD effect) -->
+                        <TextBlock x:Name="TxtGhostTime" 
+                                   Text="88:88"
+                                   FontFamily="pack://application:,,,/Resources/Fonts/#DS-Digital, Consolas, Courier New"
+                                   FontSize="38"
+                                   FontWeight="Bold"
+                                   Foreground="#123818"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   SnapsToDevicePixels="True"
+                                   IsHitTestVisible="False"/>
+
+                        <!-- Primary Active Time Readout -->
+                        <TextBlock x:Name="TxtMainTime" 
+                                   Text="00:00"
+                                   FontFamily="pack://application:,,,/Resources/Fonts/#DS-Digital, Consolas, Courier New"
+                                   FontSize="38"
+                                   FontWeight="Bold"
+                                   Foreground="#23FF23"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Effect="{StaticResource NormalGlow}"
+                                   SnapsToDevicePixels="True"/>
+                    </Grid>
+                </Viewbox>
+
+                <!-- Bottom Sub Info Row wrapped in Viewbox -->
+                <Viewbox x:Name="SubInfoRow" Grid.Row="2" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,0" MaxHeight="20">
+                    <StackPanel Orientation="Horizontal" 
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                        <TextBlock Text="[ " 
+                                   FontFamily="Consolas, Segoe UI" 
+                                   FontSize="10" 
+                                   FontWeight="Bold" 
+                                   Foreground="#5580FFA0"/>
+                        <TextBlock x:Name="TxtPrefix" 
+                                   Text="Ends at: " 
+                                   FontFamily="Segoe UI, Arial" 
+                                   FontSize="10.5" 
+                                   FontWeight="SemiBold" 
+                                   Foreground="#A0FFA0"
+                                   Margin="0,0,2,0"/>
+                        <TextBlock x:Name="TxtSubTime" 
+                                   Text="--:--:--" 
+                                   FontFamily="Consolas, Segoe UI, Arial" 
+                                   FontSize="10.5" 
+                                   FontWeight="Bold" 
+                                   Foreground="#23FF23"/>
+                        <TextBlock Text=" ]" 
+                                   FontFamily="Consolas, Segoe UI" 
+                                   FontSize="10" 
+                                   FontWeight="Bold" 
+                                   Foreground="#5580FFA0"/>
+                    </StackPanel>
+                </Viewbox>
+            </Grid>
         </Grid>
     </Border>
 </Window>
