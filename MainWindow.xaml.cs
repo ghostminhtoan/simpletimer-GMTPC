@@ -30,7 +30,6 @@ namespace TimeBomb
         public bool IsActiveInstance { get; private set; } = false;
         public bool IsClickThrough { get; private set; } = false;
         public bool ShowSubInfo { get; private set; } = true;
-        public bool ObsHideStream { get; private set; } = false;
         public TimeBombManager Manager { get; set; }
 
         public event Action<MainWindow> OnActivatedByInteraction;
@@ -76,7 +75,7 @@ namespace TimeBomb
             {
                 _settings.WindowWidth = (int)ActualWidth;
                 _settings.WindowHeight = (int)ActualHeight;
-                _settings.Save();
+                _settings.RequestSaveDebounced();
             }
         }
 
@@ -100,22 +99,7 @@ namespace TimeBomb
             SetWindowOpacity(_settings.Opacity);
             SetClickThrough(_settings.ClickThrough);
             SetShowSubInfo(_settings.ShowSubInfo);
-            SetObsHideStream(_settings.ObsHideStream);
             ClampToScreen();
-        }
-
-        public void SetObsHideStream(bool hide)
-        {
-            ObsHideStream = hide;
-            _settings.ObsHideStream = hide;
-            _settings.Save();
-
-            IntPtr handle = new WindowInteropHelper(this).Handle;
-            if (handle != IntPtr.Zero)
-            {
-                uint affinity = hide ? Win32Api.WDA_EXCLUDEFROMCAPTURE : Win32Api.WDA_NONE;
-                Win32Api.SetWindowDisplayAffinity(handle, affinity);
-            }
         }
 
         public void SetShowSubInfo(bool enable)
@@ -521,10 +505,16 @@ namespace TimeBomb
                 {
                     _settings.WindowX = (int)Left;
                     _settings.WindowY = (int)Top;
-                    _settings.Save();
+                    _settings.RequestSaveDebounced();
                 }
             }
             catch { }
+        }
+
+        protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+        {
+            base.OnDpiChanged(oldDpi, newDpi);
+            ClampToScreen();
         }
 
         public void MoveToNextDesktop()

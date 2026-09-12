@@ -9,7 +9,13 @@
         Topmost="True"
         ShowInTaskbar="True"
         ResizeMode="CanResizeWithGrip"
-        WindowStartupLocation="Manual">
+        WindowStartupLocation="Manual"
+        RenderOptions.BitmapScalingMode="HighQuality"
+        RenderOptions.ClearTypeHint="Enabled"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
     <Window.Resources>
         <!-- Glow Effect for Normal State -->
         <DropShadowEffect x:Key="NormalGlow" Color="#23FF23" BlurRadius="10" ShadowDepth="0" Opacity="0.5"/>

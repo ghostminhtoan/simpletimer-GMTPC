@@ -40,9 +40,16 @@ namespace TimeBomb.Core
         {
             if (nCode >= 0 && lParam != IntPtr.Zero)
             {
+                int msg = wParam.ToInt32();
+
+                // Ultra-fast bypass: zero overhead for gaming mice high polling rates (1000Hz - 8000Hz WM_MOUSEMOVE)
+                if (msg != Win32Api.WM_MBUTTONDOWN && msg != Win32Api.WM_MBUTTONUP)
+                {
+                    return Win32Api.CallNextHookEx(_hookId, nCode, wParam, lParam);
+                }
+
                 try
                 {
-                    int msg = wParam.ToInt32();
                     if (msg == Win32Api.WM_MBUTTONDOWN)
                     {
                         var hookStruct = (Win32Api.MSLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(Win32Api.MSLLHOOKSTRUCT));

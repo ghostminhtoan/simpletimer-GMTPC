@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Security.AccessControl;
 using System.Security.Principal;
@@ -183,6 +184,21 @@ namespace TimeBomb
 
             try
             {
+                bool startMinimized = false;
+                if (e.Args != null)
+                {
+                    foreach (var arg in e.Args)
+                    {
+                        if (string.Equals(arg, "--minimized", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(arg, "-minimized", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(arg, "--silent", StringComparison.OrdinalIgnoreCase))
+                        {
+                            startMinimized = true;
+                            break;
+                        }
+                    }
+                }
+
                 SetupIpcEvent();
 
                 _soundManager = new SoundManager();
@@ -194,8 +210,13 @@ namespace TimeBomb
                 WireHookEvents();
                 WireMouseHook();
                 WireGamepadEvents();
-                CreateTimerInstance();
+                CreateTimerInstance(!startMinimized);
                 SetupTrayIcon();
+
+                if (startMinimized)
+                {
+                    TrimWorkingSet();
+                }
             }
             catch (Exception ex)
             {
@@ -220,7 +241,7 @@ namespace TimeBomb
             catch { }
         }
 
-        public TimerInstance CreateTimerInstance()
+        public TimerInstance CreateTimerInstance(bool showWindow = true)
         {
             int id = _nextInstanceId++;
             SettingsManager instSettings = (id == 1 && _baseSettings != null) ? _baseSettings : new SettingsManager(id);
@@ -288,8 +309,15 @@ namespace TimeBomb
 
             UpdateBadges();
             SetActiveInstance(instance);
-            instance.Manager.Start(playSound: true);
-            instance.Window.Show();
+            instance.Manager.Start(playSound: showWindow);
+            if (showWindow)
+            {
+                instance.Window.Show();
+            }
+            else
+            {
+                instance.Window.Hide();
+            }
             UpdateTrayIconMenu();
 
             return instance;
@@ -640,9 +668,20 @@ namespace TimeBomb
                         {
                             inst?.Manager?.Stop();
                         }
+                        TrimWorkingSet();
                     }
                 });
             }
+        }
+
+        public static void TrimWorkingSet()
+        {
+            try
+            {
+                GC.Collect(1, GCCollectionMode.Optimized);
+                Win32Api.SetProcessWorkingSetSize(Process.GetCurrentProcess().Handle, (IntPtr)(-1), (IntPtr)(-1));
+            }
+            catch { }
         }
 
         private void SetupTrayIcon()

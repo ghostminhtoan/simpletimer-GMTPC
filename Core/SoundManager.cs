@@ -9,12 +9,40 @@ namespace TimeBomb.Core
     {
         private readonly string _soundsDir;
         private readonly Dictionary<string, SoundPlayer> _cache = new Dictionary<string, SoundPlayer>(StringComparer.OrdinalIgnoreCase);
+        private readonly List<MemoryStream> _activeStreams = new List<MemoryStream>();
         private SoundPlayer _alarmPlayer;
 
         public SoundManager()
         {
             string appDir = AppDomain.CurrentDomain.BaseDirectory;
             _soundsDir = Path.Combine(appDir, "Resources", "Sounds");
+            PreloadAllSounds();
+        }
+
+        private void PreloadAllSounds()
+        {
+            try
+            {
+                if (Directory.Exists(_soundsDir))
+                {
+                    string[] wavFiles = Directory.GetFiles(_soundsDir, "*.wav");
+                    foreach (string filePath in wavFiles)
+                    {
+                        string fileName = Path.GetFileName(filePath);
+                        try
+                        {
+                            byte[] bytes = File.ReadAllBytes(filePath);
+                            var ms = new MemoryStream(bytes);
+                            _activeStreams.Add(ms);
+                            var player = new SoundPlayer(ms);
+                            player.Load();
+                            _cache[fileName] = player;
+                        }
+                        catch { }
+                    }
+                }
+            }
+            catch { }
         }
 
         public void Play(string soundFile)
@@ -68,10 +96,23 @@ namespace TimeBomb.Core
             string fullPath = Path.Combine(_soundsDir, fileName);
             if (File.Exists(fullPath))
             {
-                player = new SoundPlayer(fullPath);
-                try { player.Load(); } catch { }
-                _cache[fileName] = player;
-                return player;
+                try
+                {
+                    byte[] bytes = File.ReadAllBytes(fullPath);
+                    var ms = new MemoryStream(bytes);
+                    _activeStreams.Add(ms);
+                    player = new SoundPlayer(ms);
+                    player.Load();
+                    _cache[fileName] = player;
+                    return player;
+                }
+                catch
+                {
+                    player = new SoundPlayer(fullPath);
+                    try { player.Load(); } catch { }
+                    _cache[fileName] = player;
+                    return player;
+                }
             }
 
             return null;
@@ -85,6 +126,12 @@ namespace TimeBomb.Core
                 try { p.Dispose(); } catch { }
             }
             _cache.Clear();
+
+            foreach (var ms in _activeStreams)
+            {
+                try { ms.Dispose(); } catch { }
+            }
+            _activeStreams.Clear();
         }
     }
 }

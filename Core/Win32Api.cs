@@ -178,6 +178,10 @@ namespace TimeBomb.Core
         public static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
         #endregion
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool SetProcessWorkingSetSize(IntPtr hProcess, IntPtr dwMinimumWorkingSetSize, IntPtr dwMaximumWorkingSetSize);
+
         public static void SetClickThrough(IntPtr hWnd, bool enable)
         {
             int exStyle = GetWindowLong(hWnd, GWL_EXSTYLE);

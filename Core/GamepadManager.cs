@@ -112,6 +112,7 @@ namespace TimeBomb.Core
         private int _activeXInputUserIndex = -1;
         private bool _isAlarmVibrating = false;
         private bool _alarmRumblePhase = false;
+        private int _idleCounter = 0;
 
         public bool IsAlarmActive { get; set; } = false;
         public bool IsConnected { get; private set; } = false;
@@ -203,14 +204,38 @@ namespace TimeBomb.Core
                 bool hasController = (current != GamepadButtons.None || _activeXInputUserIndex >= 0);
                 IsConnected = hasController;
 
-                // Adaptive polling rate to minimize background CPU usage
-                if (!hasController && _pollTimer.Interval.TotalMilliseconds < 250)
+                // Adaptive polling rate to minimize background CPU usage and save battery
+                if (!hasController)
                 {
-                    _pollTimer.Interval = TimeSpan.FromMilliseconds(250);
+                    _idleCounter = 0;
+                    if (_pollTimer.Interval.TotalMilliseconds < 250)
+                    {
+                        _pollTimer.Interval = TimeSpan.FromMilliseconds(250);
+                    }
                 }
-                else if (hasController && _pollTimer.Interval.TotalMilliseconds > 20)
+                else
                 {
-                    _pollTimer.Interval = TimeSpan.FromMilliseconds(16);
+                    if (current == GamepadButtons.None)
+                    {
+                        _idleCounter++;
+                        // If idle for ~10 seconds (approx 600 ticks at 16ms), drop rate to 80ms (~12Hz)
+                        if (_idleCounter > 600)
+                        {
+                            if (_pollTimer.Interval.TotalMilliseconds < 80)
+                            {
+                                _pollTimer.Interval = TimeSpan.FromMilliseconds(80);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Instantly restore 16ms (~60Hz) fast responsiveness when user touches any button
+                        _idleCounter = 0;
+                        if (_pollTimer.Interval.TotalMilliseconds != 16)
+                        {
+                            _pollTimer.Interval = TimeSpan.FromMilliseconds(16);
+                        }
+                    }
                 }
 
                 ProcessGamepadState(current);

@@ -36,10 +36,10 @@ namespace TimeBomb.Core
 
                     if (enable)
                     {
-                        string exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                        string exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;
                         if (!string.IsNullOrEmpty(exePath) && File.Exists(exePath))
                         {
-                            key.SetValue(AppName, $"\"{exePath}\"");
+                            key.SetValue(AppName, $"\"{exePath}\" --minimized");
                             return true;
                         }
                     }
