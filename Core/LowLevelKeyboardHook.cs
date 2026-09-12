@@ -64,6 +64,28 @@ namespace TimeBomb.Core
             catch { }
         }
 
+        private bool _suppressStartMenuOnWinUp = false;
+
+        private void DispatchAction(Action action)
+        {
+            if (action == null) return;
+            try
+            {
+                var dispatcher = System.Windows.Application.Current?.Dispatcher;
+                if (dispatcher != null && !dispatcher.HasShutdownStarted)
+                {
+                    dispatcher.BeginInvoke(action);
+                    return;
+                }
+            }
+            catch { }
+
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try { action(); } catch { }
+            });
+        }
+
         private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
             if (nCode >= 0 && lParam != IntPtr.Zero)
@@ -82,7 +104,8 @@ namespace TimeBomb.Core
                     {
                         if (isKeyDown)
                         {
-                            OnDismissAlarmRequested?.Invoke();
+                            _suppressStartMenuOnWinUp = true;
+                            DispatchAction(() => OnDismissAlarmRequested?.Invoke());
                             return (IntPtr)1;
                         }
                     }
@@ -108,13 +131,23 @@ namespace TimeBomb.Core
                         else if (isKeyUp)
                         {
                             _isWinDown = false;
-                            if (_shortcutExecuted)
+                            DispatchAction(() => OnWinKeyReleased?.Invoke());
+
+                            if (_suppressStartMenuOnWinUp)
                             {
-                                _shortcutExecuted = false;
-                                OnWinKeyReleased?.Invoke();
-                                // Suppress Win key release so Start Menu does not open
-                                return (IntPtr)1;
+                                _suppressStartMenuOnWinUp = false;
+                                try
+                                {
+                                    // Send dummy unassigned key 0xE8 to notify Windows OS a key was pressed with Win,
+                                    // suppressing Start Menu popup ONLY when a hotkey swallowed its key (e.g. Esc).
+                                    Win32Api.keybd_event(0xE8, 0, 0, UIntPtr.Zero);
+                                    Win32Api.keybd_event(0xE8, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
+                                }
+                                catch { }
                             }
+
+                            // Always forward Win KeyUp so other apps (OBS) track modifier keys cleanly without stuck state
+                            return Win32Api.CallNextHookEx(_hookId, nCode, wParam, lParam);
                         }
                     }
 
@@ -131,73 +164,66 @@ namespace TimeBomb.Core
                     {
                         if (CheckHotkeyMatch(_settings, "IntervalTimer", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
-                            _shortcutExecuted = true;
                             _suppressNextEscUp = true;
-                            OnIntervalToggleRequested?.Invoke();
-                            ForceReleaseWinKey();
+                            _suppressStartMenuOnWinUp = true;
+                            DispatchAction(() => OnIntervalToggleRequested?.Invoke());
                             return (IntPtr)1;
                         }
                         else if (CheckHotkeyMatch(_settings, "ToggleHUD", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
-                            _shortcutExecuted = true;
-                            OnToggleRequested?.Invoke();
-                            ForceReleaseWinKey();
+                            DispatchAction(() => OnToggleRequested?.Invoke());
+                            return Win32Api.CallNextHookEx(_hookId, nCode, wParam, lParam);
                         }
                         else if (CheckHotkeyMatch(_settings, "PauseToggle", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
-                            _shortcutExecuted = true;
-                            OnPauseToggleRequested?.Invoke();
-                            ForceReleaseWinKey();
+                            // Instant non-blocking passthrough: fire action in background, immediately forward key to OBS
+                            DispatchAction(() => OnPauseToggleRequested?.Invoke());
+                            return Win32Api.CallNextHookEx(_hookId, nCode, wParam, lParam);
                         }
                         else if (CheckHotkeyMatch(_settings, "Reset", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
-                            _shortcutExecuted = true;
-                            OnResetRequested?.Invoke();
-                            ForceReleaseWinKey();
+                            DispatchAction(() => OnResetRequested?.Invoke());
+                            return Win32Api.CallNextHookEx(_hookId, nCode, wParam, lParam);
                         }
                         else if (CheckHotkeyMatch(_settings, "SaveCountdown", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
-                            _shortcutExecuted = true;
-                            OnSaveRequested?.Invoke();
-                            ForceReleaseWinKey();
+                            DispatchAction(() => OnSaveRequested?.Invoke());
+                            return Win32Api.CallNextHookEx(_hookId, nCode, wParam, lParam);
                         }
                         else if (CheckHotkeyMatch(_settings, "SwitchMode", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
-                            _shortcutExecuted = true;
                             _suppressNextEscUp = true;
-                            OnSwitchModeRequested?.Invoke();
-                            ForceReleaseWinKey();
+                            _suppressStartMenuOnWinUp = true;
+                            DispatchAction(() => OnSwitchModeRequested?.Invoke());
                             return (IntPtr)1;
                         }
                         else if (CheckHotkeyMatch(_settings, "NewInstance", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
-                            _shortcutExecuted = true;
-                            OnNewInstanceRequested?.Invoke();
-                            ForceReleaseWinKey();
+                            DispatchAction(() => OnNewInstanceRequested?.Invoke());
+                            return Win32Api.CallNextHookEx(_hookId, nCode, wParam, lParam);
                         }
                         else if (CheckHotkeyMatch(_settings, "CloseInstance", vk, currentWin, currentCtrl, currentAlt, currentShift) || (currentWin && vk == Win32Api.VK_DELETE))
                         {
-                            _shortcutExecuted = true;
-                            OnCloseInstanceRequested?.Invoke();
-                            ForceReleaseWinKey();
+                            DispatchAction(() => OnCloseInstanceRequested?.Invoke());
+                            return Win32Api.CallNextHookEx(_hookId, nCode, wParam, lParam);
                         }
                         else if (CheckHotkeyMatch(_settings, "AdjustUp", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
                             if (!_isUpHeld)
                             {
                                 _isUpHeld = true;
-                                _shortcutExecuted = true;
-                                OnAdjustUpStart?.Invoke();
+                                DispatchAction(() => OnAdjustUpStart?.Invoke());
                             }
+                            return Win32Api.CallNextHookEx(_hookId, nCode, wParam, lParam);
                         }
                         else if (CheckHotkeyMatch(_settings, "AdjustDown", vk, currentWin, currentCtrl, currentAlt, currentShift))
                         {
                             if (!_isDownHeld)
                             {
                                 _isDownHeld = true;
-                                _shortcutExecuted = true;
-                                OnAdjustDownStart?.Invoke();
+                                DispatchAction(() => OnAdjustDownStart?.Invoke());
                             }
+                            return Win32Api.CallNextHookEx(_hookId, nCode, wParam, lParam);
                         }
                     }
                     else if (isKeyUp)
@@ -216,14 +242,12 @@ namespace TimeBomb.Core
                         if (vk == kUp && _isUpHeld)
                         {
                             _isUpHeld = false;
-                            OnAdjustUpStop?.Invoke();
-                            ForceReleaseWinKey();
+                            DispatchAction(() => OnAdjustUpStop?.Invoke());
                         }
                         else if (vk == kDown && _isDownHeld)
                         {
                             _isDownHeld = false;
-                            OnAdjustDownStop?.Invoke();
-                            ForceReleaseWinKey();
+                            DispatchAction(() => OnAdjustDownStop?.Invoke());
                         }
                     }
                     else
@@ -234,14 +258,12 @@ namespace TimeBomb.Core
                             if (vk == Win32Api.VK_UP && _isUpHeld)
                             {
                                 _isUpHeld = false;
-                                OnAdjustUpStop?.Invoke();
-                                ForceReleaseWinKey();
+                                DispatchAction(() => OnAdjustUpStop?.Invoke());
                             }
                             else if (vk == Win32Api.VK_DOWN && _isDownHeld)
                             {
                                 _isDownHeld = false;
-                                OnAdjustDownStop?.Invoke();
-                                ForceReleaseWinKey();
+                                DispatchAction(() => OnAdjustDownStop?.Invoke());
                             }
                         }
                     }
@@ -274,21 +296,6 @@ namespace TimeBomb.Core
             }
 
             return vk == reqVk && isWin == reqWin && isCtrl == reqCtrl && isAlt == reqAlt && isShift == reqShift;
-        }
-
-        private void ForceReleaseWinKey()
-        {
-            _isWinDown = false;
-            _shortcutExecuted = false;
-
-            try
-            {
-                // Send dummy unassigned key 0xE8 to tell Windows OS a key was pressed with Win,
-                // suppressing Start Menu popup without corrupting physical Win key state.
-                Win32Api.keybd_event(0xE8, 0, 0, UIntPtr.Zero);
-                Win32Api.keybd_event(0xE8, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
-            }
-            catch { }
         }
 
         public void Dispose()
