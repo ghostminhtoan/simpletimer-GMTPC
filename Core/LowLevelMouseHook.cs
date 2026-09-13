@@ -26,11 +26,20 @@ namespace TimeBomb.Core
         {
             try
             {
-                using (Process curProcess = Process.GetCurrentProcess())
-                using (ProcessModule curModule = curProcess.MainModule)
+                IntPtr moduleHandle = Win32Api.GetModuleHandle((string)null);
+                _hookId = Win32Api.SetWindowsHookEx(Win32Api.WH_MOUSE_LL, _proc, moduleHandle, 0);
+
+                if (_hookId == IntPtr.Zero)
                 {
-                    IntPtr moduleHandle = Win32Api.GetModuleHandle(curModule.ModuleName);
-                    _hookId = Win32Api.SetWindowsHookEx(Win32Api.WH_MOUSE_LL, _proc, moduleHandle, 0);
+                    using (Process curProcess = Process.GetCurrentProcess())
+                    using (ProcessModule curModule = curProcess.MainModule)
+                    {
+                        if (curModule != null)
+                        {
+                            IntPtr hMod = Win32Api.GetModuleHandle(curModule.ModuleName);
+                            _hookId = Win32Api.SetWindowsHookEx(Win32Api.WH_MOUSE_LL, _proc, hMod, 0);
+                        }
+                    }
                 }
             }
             catch { }

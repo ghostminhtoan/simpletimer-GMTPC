@@ -38,6 +38,8 @@ namespace TimeBomb.Core
         public bool IsWinKeyHeld => _isWinDown;
         public bool ShortcutExecuted => _shortcutExecuted;
 
+        private System.Windows.Threading.DispatcherTimer _retryHookTimer;
+
         public LowLevelKeyboardHook(SettingsManager settings = null)
         {
             _settings = settings;
@@ -50,18 +52,96 @@ namespace TimeBomb.Core
             _settings = settings;
         }
 
+        public void EnsureHook()
+        {
+            if (_hookId != IntPtr.Zero) return;
+            InstallHook();
+        }
+
+        public void Rehook()
+        {
+            try
+            {
+                if (_hookId != IntPtr.Zero)
+                {
+                    Win32Api.UnhookWindowsHookEx(_hookId);
+                    _hookId = IntPtr.Zero;
+                }
+                InstallHook();
+            }
+            catch { }
+        }
+
         private void InstallHook()
         {
             try
             {
-                using (Process curProcess = Process.GetCurrentProcess())
-                using (ProcessModule curModule = curProcess.MainModule)
+                // In Win32, passing NULL to GetModuleHandle returns the current process executable instance handle,
+                // avoiding Process.GetCurrentProcess().MainModule exceptions during Windows startup.
+                IntPtr moduleHandle = Win32Api.GetModuleHandle((string)null);
+                _hookId = Win32Api.SetWindowsHookEx(Win32Api.WH_KEYBOARD_LL, _proc, moduleHandle, 0);
+
+                if (_hookId == IntPtr.Zero)
                 {
-                    IntPtr moduleHandle = Win32Api.GetModuleHandle(curModule.ModuleName);
-                    _hookId = Win32Api.SetWindowsHookEx(Win32Api.WH_KEYBOARD_LL, _proc, moduleHandle, 0);
+                    using (Process curProcess = Process.GetCurrentProcess())
+                    using (ProcessModule curModule = curProcess.MainModule)
+                    {
+                        if (curModule != null)
+                        {
+                            IntPtr hMod = Win32Api.GetModuleHandle(curModule.ModuleName);
+                            _hookId = Win32Api.SetWindowsHookEx(Win32Api.WH_KEYBOARD_LL, _proc, hMod, 0);
+                        }
+                    }
                 }
             }
             catch { }
+
+            // If desktop session is not yet ready (Windows startup), retry after delay
+            if (_hookId == IntPtr.Zero)
+            {
+                ScheduleRetry();
+            }
+            else
+            {
+                StopRetry();
+            }
+        }
+
+        private int _retryCount = 0;
+        private void ScheduleRetry()
+        {
+            if (_retryCount >= 10) return;
+            _retryCount++;
+
+            if (_retryHookTimer == null)
+            {
+                _retryHookTimer = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(300)
+                };
+                _retryHookTimer.Tick += (s, e) =>
+                {
+                    if (_hookId != IntPtr.Zero)
+                    {
+                        StopRetry();
+                        return;
+                    }
+                    InstallHook();
+                };
+            }
+
+            if (!_retryHookTimer.IsEnabled)
+            {
+                _retryHookTimer.Start();
+            }
+        }
+
+        private void StopRetry()
+        {
+            if (_retryHookTimer != null && _retryHookTimer.IsEnabled)
+            {
+                _retryHookTimer.Stop();
+            }
         }
 
         private bool _suppressStartMenuOnWinUp = false;
@@ -300,6 +380,7 @@ namespace TimeBomb.Core
 
         public void Dispose()
         {
+            StopRetry();
             if (_hookId != IntPtr.Zero)
             {
                 Win32Api.UnhookWindowsHookEx(_hookId);

@@ -212,11 +212,6 @@ namespace TimeBomb
                 WireGamepadEvents();
                 CreateTimerInstance(!startMinimized);
                 SetupTrayIcon();
-
-                if (startMinimized)
-                {
-                    TrimWorkingSet();
-                }
             }
             catch (Exception ex)
             {
@@ -234,6 +229,7 @@ namespace TimeBomb
                 {
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
+                        _hook?.EnsureHook();
                         CreateTimerInstance();
                     }));
                 }, null, -1, false);
@@ -246,6 +242,13 @@ namespace TimeBomb
             int id = _nextInstanceId++;
             SettingsManager instSettings = (id == 1 && _baseSettings != null) ? _baseSettings : new SettingsManager(id);
             var instance = new TimerInstance(id, _soundManager, _hook, _gamepadManager, instSettings);
+
+            // Ensure window handle is created so message pumping and Win32 interop work cleanly even when initially hidden
+            try
+            {
+                new System.Windows.Interop.WindowInteropHelper(instance.Window).EnsureHandle();
+            }
+            catch { }
 
             // If there is already a previous instance, position the new instance nicely below it
             if (_instances.Count > 0)
@@ -309,9 +312,9 @@ namespace TimeBomb
 
             UpdateBadges();
             SetActiveInstance(instance);
-            instance.Manager.Start(playSound: showWindow);
             if (showWindow)
             {
+                instance.Manager.Start(playSound: true);
                 instance.Window.Show();
             }
             else
@@ -653,6 +656,8 @@ namespace TimeBomb
             {
                 Dispatcher.Invoke(() =>
                 {
+                    _hook?.EnsureHook();
+
                     var list = _instances.ToArray();
                     bool anyVisible = Array.Exists(list, i => i != null && i.Window != null && i.Window.IsVisible);
                     if (!anyVisible)
@@ -679,7 +684,9 @@ namespace TimeBomb
             try
             {
                 GC.Collect(1, GCCollectionMode.Optimized);
-                Win32Api.SetProcessWorkingSetSize(Process.GetCurrentProcess().Handle, (IntPtr)(-1), (IntPtr)(-1));
+                // Intentionally do NOT call SetProcessWorkingSetSize(-1, -1) because purging memory
+                // to disk causes severe page faults upon the first keypress, exceeding Windows
+                // LowLevelHooksTimeout and causing Windows to silently unhook the global keyboard hook!
             }
             catch { }
         }
@@ -861,13 +868,28 @@ namespace TimeBomb
                 contextMenu.Items.Add(new ToolStripSeparator());
             }
 
-            contextMenu.Items.Add("Exit All", null, (s, ev) => ExitApplication());
+            contextMenu.Items.Add("Exit All", null, (s, ev) =>
+            {
+                if (Dispatcher != null && !Dispatcher.HasShutdownStarted)
+                {
+                    Dispatcher.BeginInvoke(new Action(() => ExitApplication()));
+                }
+                else
+                {
+                    ExitApplication();
+                }
+            });
 
             _notifyIcon.ContextMenuStrip = contextMenu;
         }
 
+        private bool _isExiting = false;
+
         private void ExitApplication()
         {
+            if (_isExiting) return;
+            _isExiting = true;
+
             try
             {
                 _waitHandleRegistration?.Unregister(null);
@@ -876,9 +898,9 @@ namespace TimeBomb
             }
             catch { }
 
-            foreach (var inst in _instances)
+            foreach (var inst in _instances.ToArray())
             {
-                inst.Dispose();
+                try { inst?.Dispose(); } catch { }
             }
             _instances.Clear();
 
@@ -890,18 +912,23 @@ namespace TimeBomb
 
             if (_notifyIcon != null)
             {
-                _notifyIcon.Visible = false;
-                _notifyIcon.Dispose();
+                try
+                {
+                    _notifyIcon.Visible = false;
+                    _notifyIcon.ContextMenuStrip?.Dispose();
+                    _notifyIcon.Dispose();
+                }
+                catch { }
                 _notifyIcon = null;
             }
 
-            _hook?.Dispose();
+            try { _hook?.Dispose(); } catch { }
             _hook = null;
-            _mouseHook?.Dispose();
+            try { _mouseHook?.Dispose(); } catch { }
             _mouseHook = null;
-            _gamepadManager?.Dispose();
+            try { _gamepadManager?.Dispose(); } catch { }
             _gamepadManager = null;
-            _soundManager?.Dispose();
+            try { _soundManager?.Dispose(); } catch { }
             _soundManager = null;
 
             try
@@ -912,7 +939,18 @@ namespace TimeBomb
             }
             catch { }
 
-            Shutdown();
+            try
+            {
+                Shutdown();
+            }
+            catch { }
+
+            // Ensure process completely terminates without leaving any lingering zombie background process
+            try
+            {
+                Environment.Exit(0);
+            }
+            catch { }
         }
 
         protected override void OnExit(ExitEventArgs e)
