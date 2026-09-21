@@ -412,7 +412,7 @@ namespace TimeBomb.Core
             else if (Mode == AppMode.Stopwatch)
             {
                 Mode = AppMode.Clock;
-                _sound.Play("switch_timer.wav");
+                _sound.Play("switch_clock.wav");
             }
             else
             {
