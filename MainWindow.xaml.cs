@@ -439,6 +439,33 @@ namespace TimeBomb
 
             menu.Items.Add(new System.Windows.Controls.Separator());
 
+            // Sound option
+            bool isSoundOn = _settings?.SoundEnabled ?? true;
+            var itemSound = new System.Windows.Controls.MenuItem
+            {
+                Header = isSoundOn ? "🔊 Sound: ON (Bật âm thanh)" : "🔈 Sound: OFF (Tắt âm thanh)",
+                Foreground = _greenBrush,
+                ToolTip = "Bật hoặc tắt chuông cảnh báo và âm thanh hẹn giờ"
+            };
+            itemSound.Click += (s, ev) =>
+            {
+                bool newSound = !(_settings?.SoundEnabled ?? true);
+                if (_settings != null)
+                {
+                    _settings.SoundEnabled = newSound;
+                    _settings.Save();
+                }
+                if (Manager?.Sound != null)
+                {
+                    Manager.Sound.IsEnabled = newSound;
+                }
+                if (Application.Current is App app)
+                {
+                    app.SyncSoundSetting(newSound);
+                }
+            };
+            menu.Items.Add(itemSound);
+
             // Click Through option
             var itemClickThrough = new System.Windows.Controls.MenuItem
             {

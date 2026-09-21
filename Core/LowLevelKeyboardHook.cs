@@ -39,12 +39,17 @@ namespace TimeBomb.Core
         public bool ShortcutExecuted => _shortcutExecuted;
 
         private System.Windows.Threading.DispatcherTimer _retryHookTimer;
+        private System.Threading.Thread _hookThread;
+        private uint _hookThreadId = 0;
+        private readonly System.Threading.ManualResetEvent _hookStartedEvent = new System.Threading.ManualResetEvent(false);
+        private volatile bool _isRunning = false;
+        private const uint WM_REHOOK = Win32Api.WM_USER + 1;
 
         public LowLevelKeyboardHook(SettingsManager settings = null)
         {
             _settings = settings;
             _proc = HookCallback;
-            InstallHook();
+            StartHookThread();
         }
 
         public void SetSettings(SettingsManager settings)
@@ -52,22 +57,61 @@ namespace TimeBomb.Core
             _settings = settings;
         }
 
+        private void StartHookThread()
+        {
+            _isRunning = true;
+            _hookThread = new System.Threading.Thread(HookThreadProc)
+            {
+                IsBackground = true,
+                Name = "TimeBomb_KeyboardHookThread"
+            };
+            _hookThread.SetApartmentState(System.Threading.ApartmentState.STA);
+            _hookThread.Start();
+            _hookStartedEvent.WaitOne(2000);
+        }
+
+        private void HookThreadProc()
+        {
+            _hookThreadId = Win32Api.GetCurrentThreadId();
+            InstallHook();
+            _hookStartedEvent.Set();
+
+            // Dedicated pure Win32 message pump running 24/7 on background STA thread
+            while (_isRunning && Win32Api.GetMessage(out Win32Api.MSG msg, IntPtr.Zero, 0, 0) > 0)
+            {
+                if (msg.message == WM_REHOOK)
+                {
+                    UninstallHook();
+                    InstallHook();
+                    continue;
+                }
+                Win32Api.TranslateMessage(ref msg);
+                Win32Api.DispatchMessage(ref msg);
+            }
+
+            UninstallHook();
+        }
+
         public void EnsureHook()
         {
-            if (_hookId != IntPtr.Zero) return;
-            InstallHook();
+            if (_hookId == IntPtr.Zero || _hookThread == null || !_hookThread.IsAlive)
+            {
+                Rehook();
+            }
         }
 
         public void Rehook()
         {
             try
             {
-                if (_hookId != IntPtr.Zero)
+                if (_hookThreadId != 0)
                 {
-                    Win32Api.UnhookWindowsHookEx(_hookId);
-                    _hookId = IntPtr.Zero;
+                    Win32Api.PostThreadMessage(_hookThreadId, WM_REHOOK, UIntPtr.Zero, IntPtr.Zero);
                 }
-                InstallHook();
+                else if (_hookThread == null || !_hookThread.IsAlive)
+                {
+                    StartHookThread();
+                }
             }
             catch { }
         }
@@ -76,23 +120,30 @@ namespace TimeBomb.Core
         {
             try
             {
-                // In Win32, passing NULL to GetModuleHandle returns the current process executable instance handle,
-                // avoiding Process.GetCurrentProcess().MainModule exceptions during Windows startup.
-                IntPtr moduleHandle = Win32Api.GetModuleHandle((string)null);
-                _hookId = Win32Api.SetWindowsHookEx(Win32Api.WH_KEYBOARD_LL, _proc, moduleHandle, 0);
-
-                if (_hookId == IntPtr.Zero)
+                IntPtr hMod = IntPtr.Zero;
+                try
                 {
                     using (Process curProcess = Process.GetCurrentProcess())
                     using (ProcessModule curModule = curProcess.MainModule)
                     {
                         if (curModule != null)
                         {
-                            IntPtr hMod = Win32Api.GetModuleHandle(curModule.ModuleName);
-                            _hookId = Win32Api.SetWindowsHookEx(Win32Api.WH_KEYBOARD_LL, _proc, hMod, 0);
+                            hMod = Win32Api.GetModuleHandle(curModule.ModuleName);
                         }
                     }
                 }
+                catch { }
+
+                if (hMod == IntPtr.Zero)
+                {
+                    hMod = Win32Api.GetModuleHandle((string)null);
+                }
+                if (hMod == IntPtr.Zero)
+                {
+                    hMod = Win32Api.LoadLibrary("user32.dll");
+                }
+
+                _hookId = Win32Api.SetWindowsHookEx(Win32Api.WH_KEYBOARD_LL, _proc, hMod, 0);
             }
             catch { }
 
@@ -105,6 +156,19 @@ namespace TimeBomb.Core
             {
                 StopRetry();
             }
+        }
+
+        private void UninstallHook()
+        {
+            try
+            {
+                if (_hookId != IntPtr.Zero)
+                {
+                    Win32Api.UnhookWindowsHookEx(_hookId);
+                    _hookId = IntPtr.Zero;
+                }
+            }
+            catch { }
         }
 
         private int _retryCount = 0;
@@ -126,7 +190,7 @@ namespace TimeBomb.Core
                         StopRetry();
                         return;
                     }
-                    InstallHook();
+                    Rehook();
                 };
             }
 
@@ -309,22 +373,27 @@ namespace TimeBomb.Core
                     else if (isKeyUp)
                     {
                         uint kEsc = _settings != null ? _settings.KeySwitchMode : Win32Api.VK_ESCAPE;
+                        uint kEsc2 = (_settings != null && _settings.KeySwitchMode_2_Enabled) ? _settings.KeySwitchMode_2 : 0;
                         uint kInterval = _settings != null ? _settings.KeyIntervalTimer : Win32Api.VK_ESCAPE;
-                        if ((vk == Win32Api.VK_ESCAPE || vk == kEsc || vk == kInterval) && _suppressNextEscUp)
+                        uint kInterval2 = (_settings != null && _settings.KeyIntervalTimer_2_Enabled) ? _settings.KeyIntervalTimer_2 : 0;
+
+                        if ((vk == Win32Api.VK_ESCAPE || vk == kEsc || (kEsc2 != 0 && vk == kEsc2) || vk == kInterval || (kInterval2 != 0 && vk == kInterval2)) && _suppressNextEscUp)
                         {
                             _suppressNextEscUp = false;
                             return (IntPtr)1;
                         }
 
                         uint kUp = _settings != null ? _settings.KeyAdjustUp : Win32Api.VK_UP;
+                        uint kUp2 = (_settings != null && _settings.KeyAdjustUp_2_Enabled) ? _settings.KeyAdjustUp_2 : 0;
                         uint kDown = _settings != null ? _settings.KeyAdjustDown : Win32Api.VK_DOWN;
+                        uint kDown2 = (_settings != null && _settings.KeyAdjustDown_2_Enabled) ? _settings.KeyAdjustDown_2 : 0;
 
-                        if (vk == kUp && _isUpHeld)
+                        if ((vk == kUp || (kUp2 != 0 && vk == kUp2)) && _isUpHeld)
                         {
                             _isUpHeld = false;
                             DispatchAction(() => OnAdjustUpStop?.Invoke());
                         }
-                        else if (vk == kDown && _isDownHeld)
+                        else if ((vk == kDown || (kDown2 != 0 && vk == kDown2)) && _isDownHeld)
                         {
                             _isDownHeld = false;
                             DispatchAction(() => OnAdjustDownStop?.Invoke());
@@ -335,12 +404,17 @@ namespace TimeBomb.Core
                         // Clean up release flags if Win was released first
                         if (isKeyUp)
                         {
-                            if (vk == Win32Api.VK_UP && _isUpHeld)
+                            uint kUp = _settings != null ? _settings.KeyAdjustUp : Win32Api.VK_UP;
+                            uint kUp2 = (_settings != null && _settings.KeyAdjustUp_2_Enabled) ? _settings.KeyAdjustUp_2 : 0;
+                            uint kDown = _settings != null ? _settings.KeyAdjustDown : Win32Api.VK_DOWN;
+                            uint kDown2 = (_settings != null && _settings.KeyAdjustDown_2_Enabled) ? _settings.KeyAdjustDown_2 : 0;
+
+                            if ((vk == Win32Api.VK_UP || vk == kUp || (kUp2 != 0 && vk == kUp2)) && _isUpHeld)
                             {
                                 _isUpHeld = false;
                                 DispatchAction(() => OnAdjustUpStop?.Invoke());
                             }
-                            else if (vk == Win32Api.VK_DOWN && _isDownHeld)
+                            else if ((vk == Win32Api.VK_DOWN || vk == kDown || (kDown2 != 0 && vk == kDown2)) && _isDownHeld)
                             {
                                 _isDownHeld = false;
                                 DispatchAction(() => OnAdjustDownStop?.Invoke());
@@ -358,34 +432,82 @@ namespace TimeBomb.Core
         {
             if (settings == null) return false;
 
-            bool reqWin = false, reqCtrl = false, reqAlt = false, reqShift = false;
-            uint reqVk = 0;
-
-            switch (name)
+            // 1. Check Primary Shortcut
+            if (GetHotkeyDef(settings, name, 1, out bool reqWin1, out bool reqCtrl1, out bool reqAlt1, out bool reqShift1, out uint reqVk1))
             {
-                case "ToggleHUD": reqWin = settings.KeyToggleHUD_Win; reqCtrl = settings.KeyToggleHUD_Ctrl; reqAlt = settings.KeyToggleHUD_Alt; reqShift = settings.KeyToggleHUD_Shift; reqVk = settings.KeyToggleHUD; break;
-                case "IntervalTimer": reqWin = settings.KeyIntervalTimer_Win; reqCtrl = settings.KeyIntervalTimer_Ctrl; reqAlt = settings.KeyIntervalTimer_Alt; reqShift = settings.KeyIntervalTimer_Shift; reqVk = settings.KeyIntervalTimer; break;
-                case "PauseToggle": reqWin = settings.KeyPauseToggle_Win; reqCtrl = settings.KeyPauseToggle_Ctrl; reqAlt = settings.KeyPauseToggle_Alt; reqShift = settings.KeyPauseToggle_Shift; reqVk = settings.KeyPauseToggle; break;
-                case "Reset": reqWin = settings.KeyReset_Win; reqCtrl = settings.KeyReset_Ctrl; reqAlt = settings.KeyReset_Alt; reqShift = settings.KeyReset_Shift; reqVk = settings.KeyReset; break;
-                case "SaveCountdown": reqWin = settings.KeySaveCountdown_Win; reqCtrl = settings.KeySaveCountdown_Ctrl; reqAlt = settings.KeySaveCountdown_Alt; reqShift = settings.KeySaveCountdown_Shift; reqVk = settings.KeySaveCountdown; break;
-                case "SwitchMode": reqWin = settings.KeySwitchMode_Win; reqCtrl = settings.KeySwitchMode_Ctrl; reqAlt = settings.KeySwitchMode_Alt; reqShift = settings.KeySwitchMode_Shift; reqVk = settings.KeySwitchMode; break;
-                case "NewInstance": reqWin = settings.KeyNewInstance_Win; reqCtrl = settings.KeyNewInstance_Ctrl; reqAlt = settings.KeyNewInstance_Alt; reqShift = settings.KeyNewInstance_Shift; reqVk = settings.KeyNewInstance; break;
-                case "CloseInstance": reqWin = settings.KeyCloseInstance_Win; reqCtrl = settings.KeyCloseInstance_Ctrl; reqAlt = settings.KeyCloseInstance_Alt; reqShift = settings.KeyCloseInstance_Shift; reqVk = settings.KeyCloseInstance; break;
-                case "AdjustUp": reqWin = settings.KeyAdjustUp_Win; reqCtrl = settings.KeyAdjustUp_Ctrl; reqAlt = settings.KeyAdjustUp_Alt; reqShift = settings.KeyAdjustUp_Shift; reqVk = settings.KeyAdjustUp; break;
-                case "AdjustDown": reqWin = settings.KeyAdjustDown_Win; reqCtrl = settings.KeyAdjustDown_Ctrl; reqAlt = settings.KeyAdjustDown_Alt; reqShift = settings.KeyAdjustDown_Shift; reqVk = settings.KeyAdjustDown; break;
+                if (vk == reqVk1 && isWin == reqWin1 && isCtrl == reqCtrl1 && isAlt == reqAlt1 && isShift == reqShift1)
+                    return true;
             }
 
-            return vk == reqVk && isWin == reqWin && isCtrl == reqCtrl && isAlt == reqAlt && isShift == reqShift;
+            // 2. Check Secondary Shortcut (if enabled)
+            if (GetHotkeyDef(settings, name, 2, out bool reqWin2, out bool reqCtrl2, out bool reqAlt2, out bool reqShift2, out uint reqVk2))
+            {
+                if (vk == reqVk2 && isWin == reqWin2 && isCtrl == reqCtrl2 && isAlt == reqAlt2 && isShift == reqShift2)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool GetHotkeyDef(SettingsManager settings, string name, int index, out bool win, out bool ctrl, out bool alt, out bool shift, out uint vk)
+        {
+            win = false; ctrl = false; alt = false; shift = false; vk = 0;
+            if (index == 1)
+            {
+                switch (name)
+                {
+                    case "ToggleHUD": win = settings.KeyToggleHUD_Win; ctrl = settings.KeyToggleHUD_Ctrl; alt = settings.KeyToggleHUD_Alt; shift = settings.KeyToggleHUD_Shift; vk = settings.KeyToggleHUD; return true;
+                    case "IntervalTimer": win = settings.KeyIntervalTimer_Win; ctrl = settings.KeyIntervalTimer_Ctrl; alt = settings.KeyIntervalTimer_Alt; shift = settings.KeyIntervalTimer_Shift; vk = settings.KeyIntervalTimer; return true;
+                    case "PauseToggle": win = settings.KeyPauseToggle_Win; ctrl = settings.KeyPauseToggle_Ctrl; alt = settings.KeyPauseToggle_Alt; shift = settings.KeyPauseToggle_Shift; vk = settings.KeyPauseToggle; return true;
+                    case "Reset": win = settings.KeyReset_Win; ctrl = settings.KeyReset_Ctrl; alt = settings.KeyReset_Alt; shift = settings.KeyReset_Shift; vk = settings.KeyReset; return true;
+                    case "SaveCountdown": win = settings.KeySaveCountdown_Win; ctrl = settings.KeySaveCountdown_Ctrl; alt = settings.KeySaveCountdown_Alt; shift = settings.KeySaveCountdown_Shift; vk = settings.KeySaveCountdown; return true;
+                    case "SwitchMode": win = settings.KeySwitchMode_Win; ctrl = settings.KeySwitchMode_Ctrl; alt = settings.KeySwitchMode_Alt; shift = settings.KeySwitchMode_Shift; vk = settings.KeySwitchMode; return true;
+                    case "NewInstance": win = settings.KeyNewInstance_Win; ctrl = settings.KeyNewInstance_Ctrl; alt = settings.KeyNewInstance_Alt; shift = settings.KeyNewInstance_Shift; vk = settings.KeyNewInstance; return true;
+                    case "CloseInstance": win = settings.KeyCloseInstance_Win; ctrl = settings.KeyCloseInstance_Ctrl; alt = settings.KeyCloseInstance_Alt; shift = settings.KeyCloseInstance_Shift; vk = settings.KeyCloseInstance; return true;
+                    case "AdjustUp": win = settings.KeyAdjustUp_Win; ctrl = settings.KeyAdjustUp_Ctrl; alt = settings.KeyAdjustUp_Alt; shift = settings.KeyAdjustUp_Shift; vk = settings.KeyAdjustUp; return true;
+                    case "AdjustDown": win = settings.KeyAdjustDown_Win; ctrl = settings.KeyAdjustDown_Ctrl; alt = settings.KeyAdjustDown_Alt; shift = settings.KeyAdjustDown_Shift; vk = settings.KeyAdjustDown; return true;
+                }
+            }
+            else if (index == 2)
+            {
+                switch (name)
+                {
+                    case "ToggleHUD": if (!settings.KeyToggleHUD_2_Enabled) return false; win = settings.KeyToggleHUD_2_Win; ctrl = settings.KeyToggleHUD_2_Ctrl; alt = settings.KeyToggleHUD_2_Alt; shift = settings.KeyToggleHUD_2_Shift; vk = settings.KeyToggleHUD_2; return true;
+                    case "IntervalTimer": if (!settings.KeyIntervalTimer_2_Enabled) return false; win = settings.KeyIntervalTimer_2_Win; ctrl = settings.KeyIntervalTimer_2_Ctrl; alt = settings.KeyIntervalTimer_2_Alt; shift = settings.KeyIntervalTimer_2_Shift; vk = settings.KeyIntervalTimer_2; return true;
+                    case "PauseToggle": if (!settings.KeyPauseToggle_2_Enabled) return false; win = settings.KeyPauseToggle_2_Win; ctrl = settings.KeyPauseToggle_2_Ctrl; alt = settings.KeyPauseToggle_2_Alt; shift = settings.KeyPauseToggle_2_Shift; vk = settings.KeyPauseToggle_2; return true;
+                    case "Reset": if (!settings.KeyReset_2_Enabled) return false; win = settings.KeyReset_2_Win; ctrl = settings.KeyReset_2_Ctrl; alt = settings.KeyReset_2_Alt; shift = settings.KeyReset_2_Shift; vk = settings.KeyReset_2; return true;
+                    case "SaveCountdown": if (!settings.KeySaveCountdown_2_Enabled) return false; win = settings.KeySaveCountdown_2_Win; ctrl = settings.KeySaveCountdown_2_Ctrl; alt = settings.KeySaveCountdown_2_Alt; shift = settings.KeySaveCountdown_2_Shift; vk = settings.KeySaveCountdown_2; return true;
+                    case "SwitchMode": if (!settings.KeySwitchMode_2_Enabled) return false; win = settings.KeySwitchMode_2_Win; ctrl = settings.KeySwitchMode_2_Ctrl; alt = settings.KeySwitchMode_2_Alt; shift = settings.KeySwitchMode_2_Shift; vk = settings.KeySwitchMode_2; return true;
+                    case "NewInstance": if (!settings.KeyNewInstance_2_Enabled) return false; win = settings.KeyNewInstance_2_Win; ctrl = settings.KeyNewInstance_2_Ctrl; alt = settings.KeyNewInstance_2_Alt; shift = settings.KeyNewInstance_2_Shift; vk = settings.KeyNewInstance_2; return true;
+                    case "CloseInstance": if (!settings.KeyCloseInstance_2_Enabled) return false; win = settings.KeyCloseInstance_2_Win; ctrl = settings.KeyCloseInstance_2_Ctrl; alt = settings.KeyCloseInstance_2_Alt; shift = settings.KeyCloseInstance_2_Shift; vk = settings.KeyCloseInstance_2; return true;
+                    case "AdjustUp": if (!settings.KeyAdjustUp_2_Enabled) return false; win = settings.KeyAdjustUp_2_Win; ctrl = settings.KeyAdjustUp_2_Ctrl; alt = settings.KeyAdjustUp_2_Alt; shift = settings.KeyAdjustUp_2_Shift; vk = settings.KeyAdjustUp_2; return true;
+                    case "AdjustDown": if (!settings.KeyAdjustDown_2_Enabled) return false; win = settings.KeyAdjustDown_2_Win; ctrl = settings.KeyAdjustDown_2_Ctrl; alt = settings.KeyAdjustDown_2_Alt; shift = settings.KeyAdjustDown_2_Shift; vk = settings.KeyAdjustDown_2; return true;
+                }
+            }
+            return false;
         }
 
         public void Dispose()
         {
+            _isRunning = false;
             StopRetry();
-            if (_hookId != IntPtr.Zero)
+            if (_hookThreadId != 0)
             {
-                Win32Api.UnhookWindowsHookEx(_hookId);
-                _hookId = IntPtr.Zero;
+                try
+                {
+                    Win32Api.PostThreadMessage(_hookThreadId, Win32Api.WM_QUIT, UIntPtr.Zero, IntPtr.Zero);
+                }
+                catch { }
             }
+            if (_hookThread != null && _hookThread.IsAlive)
+            {
+                try
+                {
+                    _hookThread.Join(500);
+                }
+                catch { }
+            }
+            UninstallHook();
         }
     }
 }

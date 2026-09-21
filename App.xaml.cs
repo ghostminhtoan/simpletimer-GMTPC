@@ -203,6 +203,7 @@ namespace TimeBomb
 
                 _soundManager = new SoundManager();
                 _baseSettings = new SettingsManager(1);
+                _soundManager.IsEnabled = _baseSettings.SoundEnabled;
                 _hook = new LowLevelKeyboardHook(_baseSettings);
                 _mouseHook = new LowLevelMouseHook();
                 _gamepadManager = new GamepadManager(_baseSettings);
@@ -609,6 +610,19 @@ namespace TimeBomb
             };
         }
 
+        public void SyncSoundSetting(bool enabled)
+        {
+            if (_baseSettings != null)
+            {
+                _baseSettings.SoundEnabled = enabled;
+            }
+            if (_soundManager != null)
+            {
+                _soundManager.IsEnabled = enabled;
+            }
+            UpdateTrayIconMenu();
+        }
+
         public void OpenShortcutSettingsDialog()
         {
             if (Dispatcher != null && !Dispatcher.HasShutdownStarted)
@@ -618,6 +632,7 @@ namespace TimeBomb
                     var dlg = new ShortcutSettingsWindow(_baseSettings);
                     dlg.OnShortcutsSaved += () =>
                     {
+                        _hook?.Rehook();
                         UpdateTrayIconMenu();
                     };
                     dlg.Show();
@@ -740,6 +755,18 @@ namespace TimeBomb
             contextMenu.Items.Add("Reset Active (Win + Backspace)", null, (s, ev) => GetTargetInstance()?.Manager.Reset());
             contextMenu.Items.Add("Switch Mode Active (Win + Esc)", null, (s, ev) => GetTargetInstance()?.Manager.SwitchMode());
             contextMenu.Items.Add("Edit Shortcut (Chỉnh phím tắt)", null, (s, ev) => OpenShortcutSettingsDialog());
+
+            var soundItem = new ToolStripMenuItem((_baseSettings?.SoundEnabled ?? true) ? "🔊 Sound: ON (Bật âm thanh)" : "🔈 Sound: OFF (Tắt âm thanh)");
+            soundItem.Checked = _baseSettings?.SoundEnabled ?? true;
+            soundItem.ToolTipText = "Bật hoặc tắt chuông cảnh báo và âm thanh hẹn giờ";
+            soundItem.Click += (s, ev) =>
+            {
+                bool newState = !(_baseSettings?.SoundEnabled ?? true);
+                SyncSoundSetting(newState);
+                _baseSettings?.Save();
+            };
+            contextMenu.Items.Add(soundItem);
+
             contextMenu.Items.Add(new ToolStripSeparator());
 
             var activeInst = GetTargetInstance();

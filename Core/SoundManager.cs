@@ -45,8 +45,23 @@ namespace TimeBomb.Core
             catch { }
         }
 
+        private bool _isEnabled = true;
+        public bool IsEnabled
+        {
+            get => _isEnabled;
+            set
+            {
+                _isEnabled = value;
+                if (!_isEnabled)
+                {
+                    StopAlarmLoop();
+                }
+            }
+        }
+
         public void Play(string soundFile)
         {
+            if (!_isEnabled) return;
             try
             {
                 SoundPlayer player = GetPlayer(soundFile);
@@ -63,6 +78,7 @@ namespace TimeBomb.Core
 
         public void StartAlarmLoop()
         {
+            if (!_isEnabled) return;
             try
             {
                 StopAlarmLoop();

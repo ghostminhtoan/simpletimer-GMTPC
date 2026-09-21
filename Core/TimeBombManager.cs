@@ -27,6 +27,7 @@ namespace TimeBomb.Core
         public bool IsRunning { get; private set; } = false;
         public bool IsPaused { get; private set; } = false;
         public bool IsAlarmActive { get; private set; } = false;
+        public SoundManager Sound => _sound;
         private bool IsWinKeyHeld => _hook != null && _hook.IsWinKeyHeld;
         public int TimerMinutes => _timerMinutes;
         public int TimerSeconds => _timerSeconds;
