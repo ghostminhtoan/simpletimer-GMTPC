@@ -40,6 +40,9 @@ namespace TimeBomb.Core
         private bool _blinkVisible = true;
         private int _lastWarningSecond = -1;
 
+        private bool _hasAnnounced2Loops = false;
+        private bool _hasAnnounced1Loop = false;
+
         // Display update: mainTime, phaseBadge, loopInfo, totalProgress, isRed, isBlinkHidden
         public event Action<string, string, string, string, bool, bool> OnDisplayChanged;
         public event Action<IntervalPhase> OnPhaseChanged;
@@ -98,6 +101,8 @@ namespace TimeBomb.Core
             IsVisible = true;
             IsPaused = false;
             CurrentLoop = 1;
+            _hasAnnounced2Loops = false;
+            _hasAnnounced1Loop = false;
             SaveSettings();
 
             if (PrepareSeconds > 0)
@@ -127,6 +132,8 @@ namespace TimeBomb.Core
             IsPaused = false;
             CurrentPhase = IntervalPhase.Idle;
             CurrentLoop = 1;
+            _hasAnnounced2Loops = false;
+            _hasAnnounced1Loop = false;
             _blinkVisible = true;
             UpdateDisplay();
         }
@@ -157,6 +164,36 @@ namespace TimeBomb.Core
             UpdateDisplay();
         }
 
+        private void AnnounceLoop(int remainingLoops)
+        {
+            if (_sound != null && !_sound.IsEnabled) return;
+
+            string wavName = remainingLoops == 2 ? "loop_2.wav" : "loop_1.wav";
+            try
+            {
+                _sound?.Play(wavName);
+            }
+            catch
+            {
+                try
+                {
+                    System.Threading.Tasks.Task.Run(() =>
+                    {
+                        try
+                        {
+                            using (var synth = new System.Speech.Synthesis.SpeechSynthesizer())
+                            {
+                                synth.SetOutputToDefaultAudioDevice();
+                                synth.Speak(remainingLoops == 2 ? "Two loops remaining" : "Final loop. One loop remaining");
+                            }
+                        }
+                        catch { }
+                    });
+                }
+                catch { }
+            }
+        }
+
         private void SwitchToPhase(IntervalPhase nextPhase, int durationSeconds)
         {
             CurrentPhase = nextPhase;
@@ -174,7 +211,28 @@ namespace TimeBomb.Core
                     _sound?.Play("adjust.wav");
                     break;
                 case IntervalPhase.Work:
-                    _sound?.Play("play.wav");
+                    if (!IsInfiniteLoops)
+                    {
+                        int remainingLoops = TotalLoops - CurrentLoop + 1;
+                        if (remainingLoops == 2 && !_hasAnnounced2Loops)
+                        {
+                            _hasAnnounced2Loops = true;
+                            AnnounceLoop(2);
+                        }
+                        else if (remainingLoops == 1 && !_hasAnnounced1Loop)
+                        {
+                            _hasAnnounced1Loop = true;
+                            AnnounceLoop(1);
+                        }
+                        else
+                        {
+                            _sound?.Play("play.wav");
+                        }
+                    }
+                    else
+                    {
+                        _sound?.Play("play.wav");
+                    }
                     break;
                 case IntervalPhase.Rest:
                     _sound?.Play("pause.wav");
@@ -214,10 +272,14 @@ namespace TimeBomb.Core
                     // Transitioning to Work
                     isNextWorkOrRest = true;
                 }
-                else if (CurrentPhase == IntervalPhase.Work && RestSeconds > 0)
+                else if (CurrentPhase == IntervalPhase.Work)
                 {
-                    // Transitioning to Rest
-                    isNextWorkOrRest = true;
+                    // Only warn transition to Rest if not the last work loop and Rest > 0
+                    bool isLastWork = !IsInfiniteLoops && CurrentLoop >= TotalLoops;
+                    if (!isLastWork && RestSeconds > 0)
+                    {
+                        isNextWorkOrRest = true;
+                    }
                 }
 
                 if (isNextWorkOrRest)
@@ -241,28 +303,30 @@ namespace TimeBomb.Core
                     break;
 
                 case IntervalPhase.Work:
-                    // After Work -> Go to Rest if Rest > 0, or check next loop
-                    if (RestSeconds > 0)
+                    // After Work -> Check if this is the final Work loop
+                    // If final loop, DO NOT rest (e.g. 5 loops means 5 work and 4 rest)
+                    bool isLastWork = !IsInfiniteLoops && CurrentLoop >= TotalLoops;
+                    if (isLastWork)
                     {
-                        SwitchToPhase(IntervalPhase.Rest, RestSeconds);
+                        if (EndSeconds > 0) SwitchToPhase(IntervalPhase.End, EndSeconds);
+                        else CompleteInterval();
                     }
                     else
                     {
-                        if (IsInfiniteLoops || CurrentLoop < TotalLoops)
+                        if (RestSeconds > 0)
                         {
-                            CurrentLoop++;
-                            SwitchToPhase(IntervalPhase.Work, WorkSeconds);
+                            SwitchToPhase(IntervalPhase.Rest, RestSeconds);
                         }
                         else
                         {
-                            if (EndSeconds > 0) SwitchToPhase(IntervalPhase.End, EndSeconds);
-                            else CompleteInterval();
+                            CurrentLoop++;
+                            SwitchToPhase(IntervalPhase.Work, WorkSeconds);
                         }
                     }
                     break;
 
                 case IntervalPhase.Rest:
-                    // After Rest -> Next Loop or End
+                    // After Rest -> Always advance to next loop (final loop never enters Rest)
                     if (IsInfiniteLoops || CurrentLoop < TotalLoops)
                     {
                         CurrentLoop++;
@@ -335,13 +399,56 @@ namespace TimeBomb.Core
                         break;
                     case IntervalPhase.Work:
                         phaseTitle = "WORK";
-                        loopInfoText = IsInfiniteLoops ? $"Loop {CurrentLoop} / ∞" : $"Loop {CurrentLoop} / {TotalLoops}";
-                        subText = RestSeconds > 0 ? $"Next: Rest ({RestSeconds}s)" : (IsInfiniteLoops || CurrentLoop < TotalLoops ? $"Next: Work" : $"Next: End");
+                        bool isLastWork = !IsInfiniteLoops && CurrentLoop >= TotalLoops;
+                        int remainingLoops = !IsInfiniteLoops ? Math.Max(1, TotalLoops - CurrentLoop + 1) : 0;
+
+                        if (IsInfiniteLoops)
+                        {
+                            loopInfoText = $"Loop {CurrentLoop} / ∞";
+                            subText = RestSeconds > 0 ? $"Next: Rest ({RestSeconds}s)" : "Next: Work";
+                        }
+                        else if (isLastWork)
+                        {
+                            loopInfoText = $"Loop {CurrentLoop} / {TotalLoops} (Final Loop)";
+                            subText = EndSeconds > 0 ? $"Next: End ({EndSeconds}s)" : "Next: Done!";
+                        }
+                        else if (remainingLoops == 2)
+                        {
+                            loopInfoText = $"Loop {CurrentLoop} / {TotalLoops} (2 Loops Left)";
+                            subText = RestSeconds > 0 ? $"Next: Rest ({RestSeconds}s)" : $"Next: Work ({WorkSeconds}s)";
+                        }
+                        else
+                        {
+                            loopInfoText = $"Loop {CurrentLoop} / {TotalLoops}";
+                            subText = RestSeconds > 0 ? $"Next: Rest ({RestSeconds}s)" : $"Next: Work ({WorkSeconds}s)";
+                        }
                         break;
                     case IntervalPhase.Rest:
                         phaseTitle = "REST";
-                        loopInfoText = IsInfiniteLoops ? $"Loop {CurrentLoop} / ∞" : $"Loop {CurrentLoop} / {TotalLoops}";
-                        subText = (IsInfiniteLoops || CurrentLoop < TotalLoops) ? $"Next: Work ({WorkSeconds}s)" : $"Next: End ({EndSeconds}s)";
+                        int nextRemaining = !IsInfiniteLoops ? Math.Max(1, TotalLoops - (CurrentLoop + 1) + 1) : 0;
+                        bool nextIsLast = !IsInfiniteLoops && (CurrentLoop + 1) >= TotalLoops;
+                        int totalRests = Math.Max(1, TotalLoops - 1);
+
+                        if (IsInfiniteLoops)
+                        {
+                            loopInfoText = $"Rest after Loop {CurrentLoop}";
+                            subText = $"Next: Work ({WorkSeconds}s)";
+                        }
+                        else if (nextIsLast)
+                        {
+                            loopInfoText = $"Rest {CurrentLoop} / {totalRests}";
+                            subText = $"Next: Final Loop ({WorkSeconds}s)";
+                        }
+                        else if (nextRemaining == 2)
+                        {
+                            loopInfoText = $"Rest {CurrentLoop} / {totalRests}";
+                            subText = $"Next: Work ({WorkSeconds}s) - 2 Loops Left";
+                        }
+                        else
+                        {
+                            loopInfoText = $"Rest {CurrentLoop} / {totalRests}";
+                            subText = $"Next: Work ({WorkSeconds}s)";
+                        }
                         break;
                     case IntervalPhase.End:
                         phaseTitle = "END";

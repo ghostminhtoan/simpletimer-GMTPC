@@ -401,6 +401,27 @@ namespace TimeBomb
 
             menu.Items.Add(new Separator());
 
+            bool soundOn = _settings?.SoundEnabled ?? true;
+            var itemSound = new MenuItem
+            {
+                Header = soundOn ? "🔊 Sound: ON (Bật âm thanh)" : "🔈 Sound: OFF (Tắt âm thanh)",
+                Foreground = _greenBrush
+            };
+            itemSound.Click += (s, ev) =>
+            {
+                bool newState = !(_settings?.SoundEnabled ?? true);
+                if (_settings != null)
+                {
+                    _settings.SoundEnabled = newState;
+                    _settings.Save();
+                }
+                if (Application.Current is App app)
+                {
+                    app.SyncSoundSetting(newState);
+                }
+            };
+            menu.Items.Add(itemSound);
+
             var itemClose = new MenuItem { Header = "Hide Window", Foreground = _redBrush };
             itemClose.Click += (s, ev) => Hide();
             menu.Items.Add(itemClose);
