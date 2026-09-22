@@ -244,8 +244,8 @@
                     </Grid.RowDefinitions>
 
                     <DockPanel Grid.Row="0" Margin="2,0,2,3">
-                        <TextBlock Text="PRESETS (CHỌN NHANH)" 
-                                   FontSize="9" 
+                        <TextBlock Text="PRESETS (CHỌN NHANH • PHẢI CHUỘT ĐỂ SỬA)" 
+                                   FontSize="8.5" 
                                    FontWeight="Bold" 
                                    Foreground="#88AA88" 
                                    VerticalAlignment="Center"/>
@@ -253,20 +253,20 @@
 
                     <UniformGrid Grid.Row="1" Rows="1" Columns="5">
                         <Button x:Name="BtnPreset1" Content="Tabata" Style="{StaticResource CyberPresetButton}" 
-                                Margin="2,0" ToolTip="Tabata: Work 20s / Rest 10s × 8 Loops (Prep 5s, End 5s)"
-                                Click="BtnPreset_Click" Tag="1"/>
+                                Margin="2,0" ToolTip="Tabata: Work 20s / Rest 10s × 8 Loops (Phải chuột để sửa)"
+                                Click="BtnPreset_Click" PreviewMouseRightButtonUp="BtnPreset_MouseRightButtonUp" Tag="1"/>
                         <Button x:Name="BtnPreset2" Content="30 / 15" Style="{StaticResource CyberPresetButton}" 
-                                Margin="2,0" ToolTip="HIIT 30/15: Work 30s / Rest 15s × 5 Loops (Prep 5s, End 5s)"
-                                Click="BtnPreset_Click" Tag="2"/>
+                                Margin="2,0" ToolTip="HIIT 30/15: Work 30s / Rest 15s × 5 Loops (Phải chuột để sửa)"
+                                Click="BtnPreset_Click" PreviewMouseRightButtonUp="BtnPreset_MouseRightButtonUp" Tag="2"/>
                         <Button x:Name="BtnPreset3" Content="45 / 15" Style="{StaticResource CyberPresetButton}" 
-                                Margin="2,0" ToolTip="Endurance: Work 45s / Rest 15s × 5 Loops (Prep 5s, End 5s)"
-                                Click="BtnPreset_Click" Tag="3"/>
+                                Margin="2,0" ToolTip="Endurance: Work 45s / Rest 15s × 5 Loops (Phải chuột để sửa)"
+                                Click="BtnPreset_Click" PreviewMouseRightButtonUp="BtnPreset_MouseRightButtonUp" Tag="3"/>
                         <Button x:Name="BtnPreset4" Content="3m / 1m" Style="{StaticResource CyberPresetButton}" 
-                                Margin="2,0" ToolTip="Boxing: Work 180s (3m) / Rest 60s (1m) × 5 Loops (Prep 5s, End 5s)"
-                                Click="BtnPreset_Click" Tag="4"/>
+                                Margin="2,0" ToolTip="Boxing: Work 180s (3m) / Rest 60s (1m) × 5 Loops (Phải chuột để sửa)"
+                                Click="BtnPreset_Click" PreviewMouseRightButtonUp="BtnPreset_MouseRightButtonUp" Tag="4"/>
                         <Button x:Name="BtnPreset5" Content="25m / 5m" Style="{StaticResource CyberPresetButton}" 
-                                Margin="2,0" ToolTip="Pomodoro: Work 1500s (25m) / Rest 300s (5m) × 4 Loops (Prep 5s, End 5s)"
-                                Click="BtnPreset_Click" Tag="5"/>
+                                Margin="2,0" ToolTip="Pomodoro: Work 1500s (25m) / Rest 300s (5m) × 4 Loops (Phải chuột để sửa)"
+                                Click="BtnPreset_Click" PreviewMouseRightButtonUp="BtnPreset_MouseRightButtonUp" Tag="5"/>
                     </UniformGrid>
                 </Grid>
 

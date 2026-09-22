@@ -89,6 +89,7 @@ namespace TimeBomb
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
             ClampToScreen();
+            RefreshPresetButtonsUI();
             Manager.UpdateDisplay();
             CheckMatchingPreset();
         }
@@ -266,6 +267,24 @@ namespace TimeBomb
             }
         }
 
+        public void RefreshPresetButtonsUI()
+        {
+            if (_settings?.IntervalPresets == null || _settings.IntervalPresets.Count == 0) return;
+
+            Button[] buttons = { BtnPreset1, BtnPreset2, BtnPreset3, BtnPreset4, BtnPreset5 };
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                if (buttons[i] == null) continue;
+                int id = i + 1;
+                var p = _settings.IntervalPresets.Find(x => x.Id == id);
+                if (p != null)
+                {
+                    buttons[i].Content = p.Name;
+                    buttons[i].ToolTip = $"{p.Name}: Work {p.Work}s / Rest {p.Rest}s × {(p.IsInfinite ? "∞" : p.Loops.ToString())} Loops\n(Chuột trái: Chọn • Chuột phải: Sửa / Đổi tên)";
+                }
+            }
+        }
+
         private void BtnPreset_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn && int.TryParse(btn.Tag?.ToString(), out int presetId))
@@ -274,36 +293,49 @@ namespace TimeBomb
             }
         }
 
+        private void BtnPreset_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is Button btn && int.TryParse(btn.Tag?.ToString(), out int presetId))
+            {
+                e.Handled = true;
+                ShowPresetContextMenu(btn, presetId);
+            }
+        }
+
         public void ApplyPreset(int presetId)
         {
-            int prep = 5, work = 30, rest = 10, end = 5, loops = 5;
-            bool infinite = false;
-
-            switch (presetId)
+            var p = _settings?.IntervalPresets?.Find(x => x.Id == presetId);
+            if (p == null)
             {
-                case 1: // Tabata (Work 20s / Rest 10s × 8 Loops)
-                    prep = 5; work = 20; rest = 10; end = 5; loops = 8;
-                    break;
-                case 2: // HIIT 30/15 (Work 30s / Rest 15s × 5 Loops)
-                    prep = 5; work = 30; rest = 15; end = 5; loops = 5;
-                    break;
-                case 3: // Endurance 45/15 (Work 45s / Rest 15s × 5 Loops)
-                    prep = 5; work = 45; rest = 15; end = 5; loops = 5;
-                    break;
-                case 4: // Boxing 3m/1m (Work 180s / Rest 60s × 5 Loops)
-                    prep = 5; work = 180; rest = 60; end = 5; loops = 5;
-                    break;
-                case 5: // Pomodoro 25m/5m (Work 1500s / Rest 300s × 4 Loops)
-                    prep = 5; work = 1500; rest = 300; end = 5; loops = 4;
-                    break;
+                var defs = SettingsManager.GetDefaultPresets();
+                int idx = presetId - 1;
+                if (idx >= 0 && idx < defs.Count) p = defs[idx];
             }
+            if (p == null) return;
 
-            TxtPrepare.Text = prep.ToString();
-            TxtWork.Text = work.ToString();
-            TxtRest.Text = rest.ToString();
-            TxtEnd.Text = end.ToString();
-            TxtLoops.Text = loops.ToString();
-            if (ChkInfinite != null) ChkInfinite.IsChecked = infinite;
+            if (TxtPrepare != null) TxtPrepare.Text = p.Prepare.ToString();
+            if (TxtWork != null) TxtWork.Text = p.Work.ToString();
+            if (TxtRest != null) TxtRest.Text = p.Rest.ToString();
+            if (TxtEnd != null) TxtEnd.Text = p.End.ToString();
+
+            if (p.IsInfinite)
+            {
+                if (ChkInfinite != null) ChkInfinite.IsChecked = true;
+                if (TxtLoops != null)
+                {
+                    TxtLoops.Text = "∞";
+                    TxtLoops.IsEnabled = false;
+                }
+            }
+            else
+            {
+                if (ChkInfinite != null) ChkInfinite.IsChecked = false;
+                if (TxtLoops != null)
+                {
+                    TxtLoops.Text = p.Loops.ToString();
+                    TxtLoops.IsEnabled = true;
+                }
+            }
 
             ReadInputsToManager();
             HighlightPresetButton(presetId);
@@ -312,6 +344,160 @@ namespace TimeBomb
             {
                 Manager.UpdateDisplay();
             }
+        }
+
+        private void ShowPresetContextMenu(Button btn, int presetId)
+        {
+            var p = _settings?.IntervalPresets?.Find(x => x.Id == presetId);
+            string presetName = p != null ? p.Name : $"Preset {presetId}";
+
+            var menu = new ContextMenu
+            {
+                Background = new SolidColorBrush(Color.FromRgb(0x18, 0x18, 0x22)),
+                BorderBrush = _greenBorder,
+                BorderThickness = new Thickness(1),
+                PlacementTarget = btn,
+                Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom
+            };
+
+            var titleItem = new MenuItem
+            {
+                Header = $"⚡ Preset #{presetId}: {presetName}",
+                IsEnabled = false,
+                Foreground = _greenBrush,
+                FontWeight = FontWeights.Bold
+            };
+            menu.Items.Add(titleItem);
+            menu.Items.Add(new Separator());
+
+            var itemApply = new MenuItem { Header = "▶ Áp dụng Preset này", Foreground = _greenBrush };
+            itemApply.Click += (s, ev) => ApplyPreset(presetId);
+            menu.Items.Add(itemApply);
+
+            var itemEdit = new MenuItem { Header = "⚙️ Chỉnh sửa thông số & Đổi tên...", Foreground = _yellowBrush, FontWeight = FontWeights.SemiBold };
+            itemEdit.Click += (s, ev) => OpenEditPresetDialog(presetId);
+            menu.Items.Add(itemEdit);
+
+            var itemSaveCurrent = new MenuItem { Header = "💾 Lưu thời gian đang nhập vào Preset này", Foreground = _greenBrush };
+            itemSaveCurrent.Click += (s, ev) => SaveCurrentInputsToPreset(presetId);
+            menu.Items.Add(itemSaveCurrent);
+
+            menu.Items.Add(new Separator());
+
+            var itemResetSingle = new MenuItem { Header = $"🔄 Khôi phục mặc định Preset #{presetId}", Foreground = new SolidColorBrush(Color.FromRgb(0xAA, 0xDD, 0xAA)) };
+            itemResetSingle.Click += (s, ev) =>
+            {
+                _settings?.ResetIntervalPreset(presetId);
+                RefreshPresetButtonsUI();
+                ApplyPreset(presetId);
+            };
+            menu.Items.Add(itemResetSingle);
+
+            var itemResetAll = new MenuItem { Header = "🔄 Khôi phục tất cả 5 Presets về mặc định", Foreground = _redBrush };
+            itemResetAll.Click += (s, ev) =>
+            {
+                if (MessageBox.Show("Bạn có chắc chắn muốn khôi phục toàn bộ 5 Presets về thông số mặc định ban đầu?", "Xác nhận khôi phục", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                {
+                    _settings?.ResetAllIntervalPresets();
+                    RefreshPresetButtonsUI();
+                    ApplyPreset(presetId);
+                }
+            };
+            menu.Items.Add(itemResetAll);
+
+            menu.IsOpen = true;
+        }
+
+        public void OpenEditPresetDialog(int presetId)
+        {
+            var p = _settings?.IntervalPresets?.Find(x => x.Id == presetId);
+            if (p == null)
+            {
+                var defs = SettingsManager.GetDefaultPresets();
+                int idx = presetId - 1;
+                if (idx >= 0 && idx < defs.Count) p = defs[idx];
+            }
+            if (p == null) return;
+
+            var dlg = new IntervalPresetEditWindow(p)
+            {
+                Owner = this,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+
+            if (dlg.ShowDialog() == true && dlg.Preset != null)
+            {
+                if (_settings != null)
+                {
+                    int index = _settings.IntervalPresets.FindIndex(x => x.Id == presetId);
+                    if (index >= 0)
+                    {
+                        _settings.IntervalPresets[index] = dlg.Preset;
+                    }
+                    else
+                    {
+                        _settings.IntervalPresets.Add(dlg.Preset);
+                    }
+                    _settings.Save();
+                }
+
+                RefreshPresetButtonsUI();
+                ApplyPreset(presetId);
+            }
+        }
+
+        public void SaveCurrentInputsToPreset(int presetId)
+        {
+            if (TxtPrepare == null || TxtWork == null || TxtRest == null || TxtEnd == null || TxtLoops == null) return;
+
+            if (!int.TryParse(TxtWork.Text, out int work) || work < 1)
+            {
+                MessageBox.Show("Thời gian Work phải tối thiểu 1 giây.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            int.TryParse(TxtPrepare.Text, out int prep);
+            int.TryParse(TxtRest.Text, out int rest);
+            int.TryParse(TxtEnd.Text, out int end);
+            bool isInf = ChkInfinite?.IsChecked == true;
+            int loops = 5;
+            if (!isInf)
+            {
+                int.TryParse(TxtLoops.Text, out loops);
+                if (loops < 1) loops = 1;
+            }
+
+            var p = _settings?.IntervalPresets?.Find(x => x.Id == presetId);
+            string name = p != null ? p.Name : $"Preset {presetId}";
+
+            var updatedPreset = new IntervalPreset
+            {
+                Id = presetId,
+                Name = name,
+                Prepare = prep >= 0 ? prep : 0,
+                Work = work,
+                Rest = rest >= 0 ? rest : 0,
+                End = end >= 0 ? end : 0,
+                Loops = loops,
+                IsInfinite = isInf
+            };
+
+            if (_settings != null)
+            {
+                int index = _settings.IntervalPresets.FindIndex(x => x.Id == presetId);
+                if (index >= 0)
+                {
+                    _settings.IntervalPresets[index] = updatedPreset;
+                }
+                else
+                {
+                    _settings.IntervalPresets.Add(updatedPreset);
+                }
+                _settings.Save();
+            }
+
+            RefreshPresetButtonsUI();
+            HighlightPresetButton(presetId);
         }
 
         private void HighlightPresetButton(int presetId)
@@ -338,19 +524,33 @@ namespace TimeBomb
         private void CheckMatchingPreset()
         {
             if (TxtPrepare == null || TxtWork == null || TxtRest == null || TxtEnd == null || TxtLoops == null) return;
+            if (_settings?.IntervalPresets == null) return;
 
             if (int.TryParse(TxtPrepare.Text, out int prep) &&
                 int.TryParse(TxtWork.Text, out int work) &&
                 int.TryParse(TxtRest.Text, out int rest) &&
-                int.TryParse(TxtEnd.Text, out int end) &&
-                int.TryParse(TxtLoops.Text, out int loops) &&
-                ChkInfinite?.IsChecked != true)
+                int.TryParse(TxtEnd.Text, out int end))
             {
-                if (prep == 5 && work == 20 && rest == 10 && end == 5 && loops == 8) { HighlightPresetButton(1); return; }
-                if (prep == 5 && work == 30 && rest == 15 && end == 5 && loops == 5) { HighlightPresetButton(2); return; }
-                if (prep == 5 && work == 45 && rest == 15 && end == 5 && loops == 5) { HighlightPresetButton(3); return; }
-                if (prep == 5 && work == 180 && rest == 60 && end == 5 && loops == 5) { HighlightPresetButton(4); return; }
-                if (prep == 5 && work == 1500 && rest == 300 && end == 5 && loops == 4) { HighlightPresetButton(5); return; }
+                bool isInf = ChkInfinite?.IsChecked == true;
+                int loops = 0;
+                if (!isInf) int.TryParse(TxtLoops.Text, out loops);
+
+                foreach (var p in _settings.IntervalPresets)
+                {
+                    if (p.Prepare == prep && p.Work == work && p.Rest == rest && p.End == end)
+                    {
+                        if (p.IsInfinite && isInf)
+                        {
+                            HighlightPresetButton(p.Id);
+                            return;
+                        }
+                        if (!p.IsInfinite && !isInf && p.Loops == loops)
+                        {
+                            HighlightPresetButton(p.Id);
+                            return;
+                        }
+                    }
+                }
             }
 
             HighlightPresetButton(0);
@@ -501,25 +701,40 @@ namespace TimeBomb
                 Foreground = _greenBrush
             };
 
-            var p1 = new MenuItem { Header = "1. Tabata (Work 20s / Rest 10s × 8)", Foreground = _greenBrush };
-            p1.Click += (s, ev) => ApplyPreset(1);
-            presetsMenu.Items.Add(p1);
+            if (_settings?.IntervalPresets != null && _settings.IntervalPresets.Count > 0)
+            {
+                foreach (var pr in _settings.IntervalPresets)
+                {
+                    int localId = pr.Id;
+                    var pItem = new MenuItem 
+                    { 
+                        Header = $"{pr.Id}. {pr.Name} ({pr.GetSummary()})", 
+                        Foreground = _greenBrush 
+                    };
+                    pItem.Click += (s, ev) => ApplyPreset(localId);
+                    presetsMenu.Items.Add(pItem);
+                }
+            }
+            else
+            {
+                for (int i = 1; i <= 5; i++)
+                {
+                    int localId = i;
+                    var pItem = new MenuItem { Header = $"Preset #{i}", Foreground = _greenBrush };
+                    pItem.Click += (s, ev) => ApplyPreset(localId);
+                    presetsMenu.Items.Add(pItem);
+                }
+            }
 
-            var p2 = new MenuItem { Header = "2. HIIT 30/15 (Work 30s / Rest 15s × 5)", Foreground = _greenBrush };
-            p2.Click += (s, ev) => ApplyPreset(2);
-            presetsMenu.Items.Add(p2);
-
-            var p3 = new MenuItem { Header = "3. Endurance (Work 45s / Rest 15s × 5)", Foreground = _greenBrush };
-            p3.Click += (s, ev) => ApplyPreset(3);
-            presetsMenu.Items.Add(p3);
-
-            var p4 = new MenuItem { Header = "4. Boxing (Work 3m / Rest 1m × 5)", Foreground = _greenBrush };
-            p4.Click += (s, ev) => ApplyPreset(4);
-            presetsMenu.Items.Add(p4);
-
-            var p5 = new MenuItem { Header = "5. Pomodoro (Focus 25m / Rest 5m × 4)", Foreground = _greenBrush };
-            p5.Click += (s, ev) => ApplyPreset(5);
-            presetsMenu.Items.Add(p5);
+            presetsMenu.Items.Add(new Separator());
+            var itemEditPresets = new MenuItem
+            {
+                Header = "⚙️ Quản lý & Tùy chỉnh Preset...",
+                Foreground = _yellowBrush,
+                FontWeight = FontWeights.SemiBold
+            };
+            itemEditPresets.Click += (s, ev) => OpenEditPresetDialog(1);
+            presetsMenu.Items.Add(itemEditPresets);
 
             menu.Items.Add(presetsMenu);
 

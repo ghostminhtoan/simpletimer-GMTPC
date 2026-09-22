@@ -168,9 +168,41 @@ namespace TimeBomb.Core
         public int IntervalWindowX { get; set; } = 250;
         public int IntervalWindowY { get; set; } = 250;
 
+        public List<IntervalPreset> IntervalPresets { get; set; } = new List<IntervalPreset>();
+
+        public static List<IntervalPreset> GetDefaultPresets()
+        {
+            return new List<IntervalPreset>
+            {
+                new IntervalPreset { Id = 1, Name = "Tabata", Prepare = 5, Work = 20, Rest = 10, End = 5, Loops = 8, IsInfinite = false },
+                new IntervalPreset { Id = 2, Name = "30 / 15", Prepare = 5, Work = 30, Rest = 15, End = 5, Loops = 5, IsInfinite = false },
+                new IntervalPreset { Id = 3, Name = "45 / 15", Prepare = 5, Work = 45, Rest = 15, End = 5, Loops = 5, IsInfinite = false },
+                new IntervalPreset { Id = 4, Name = "3m / 1m", Prepare = 5, Work = 180, Rest = 60, End = 5, Loops = 5, IsInfinite = false },
+                new IntervalPreset { Id = 5, Name = "25m / 5m", Prepare = 5, Work = 1500, Rest = 300, End = 5, Loops = 4, IsInfinite = false }
+            };
+        }
+
+        public void ResetIntervalPreset(int id)
+        {
+            var defs = GetDefaultPresets();
+            int idx = id - 1;
+            if (idx >= 0 && idx < defs.Count && idx < IntervalPresets.Count)
+            {
+                IntervalPresets[idx] = defs[idx];
+                Save();
+            }
+        }
+
+        public void ResetAllIntervalPresets()
+        {
+            IntervalPresets = GetDefaultPresets();
+            Save();
+        }
+
         public SettingsManager(int instanceId = 1)
         {
             InstanceId = instanceId;
+            IntervalPresets = GetDefaultPresets();
 
             string appDir = AppDomain.CurrentDomain.BaseDirectory;
             string portableDir = Path.Combine(appDir, ".portable");
@@ -306,6 +338,52 @@ namespace TimeBomb.Core
                     IntervalWindowX = ix;
                 if (TryGetValue("Interval", "WindowY", out string iyStr) && int.TryParse(iyStr, out int iy))
                     IntervalWindowY = iy;
+
+                // Load IntervalPresets
+                IntervalPresets.Clear();
+                var defaultPresets = GetDefaultPresets();
+                for (int i = 1; i <= 5; i++)
+                {
+                    var def = defaultPresets[i - 1];
+                    var p = new IntervalPreset { Id = i };
+
+                    if (TryGetValue("IntervalPresets", $"Preset{i}_Name", out string pNameStr) && !string.IsNullOrWhiteSpace(pNameStr))
+                        p.Name = pNameStr.Trim();
+                    else
+                        p.Name = def.Name;
+
+                    if (TryGetValue("IntervalPresets", $"Preset{i}_Prep", out string pPrepStr) && int.TryParse(pPrepStr, out int pPrepVal))
+                        p.Prepare = Math.Max(0, pPrepVal);
+                    else
+                        p.Prepare = def.Prepare;
+
+                    if (TryGetValue("IntervalPresets", $"Preset{i}_Work", out string pWorkStr) && int.TryParse(pWorkStr, out int pWorkVal))
+                        p.Work = Math.Max(1, pWorkVal);
+                    else
+                        p.Work = def.Work;
+
+                    if (TryGetValue("IntervalPresets", $"Preset{i}_Rest", out string pRestStr) && int.TryParse(pRestStr, out int pRestVal))
+                        p.Rest = Math.Max(0, pRestVal);
+                    else
+                        p.Rest = def.Rest;
+
+                    if (TryGetValue("IntervalPresets", $"Preset{i}_End", out string pEndStr) && int.TryParse(pEndStr, out int pEndVal))
+                        p.End = Math.Max(0, pEndVal);
+                    else
+                        p.End = def.End;
+
+                    if (TryGetValue("IntervalPresets", $"Preset{i}_Loops", out string pLoopStr) && int.TryParse(pLoopStr, out int pLoopVal))
+                        p.Loops = Math.Max(1, pLoopVal);
+                    else
+                        p.Loops = def.Loops;
+
+                    if (TryGetValue("IntervalPresets", $"Preset{i}_Infinite", out string pInfStr) && bool.TryParse(pInfStr, out bool pInfVal))
+                        p.IsInfinite = pInfVal;
+                    else
+                        p.IsInfinite = def.IsInfinite;
+
+                    IntervalPresets.Add(p);
+                }
 
                 // Hotkeys Load
                 bool w = KeyToggleHUD_Win, c = KeyToggleHUD_Ctrl, a = KeyToggleHUD_Alt, s = KeyToggleHUD_Shift; uint k = KeyToggleHUD;
@@ -538,6 +616,22 @@ namespace TimeBomb.Core
                         SetValue("Interval", "WindowX", IntervalWindowX.ToString());
                         SetValue("Interval", "WindowY", IntervalWindowY.ToString());
 
+                        if (IntervalPresets != null)
+                        {
+                            for (int i = 0; i < IntervalPresets.Count; i++)
+                            {
+                                var p = IntervalPresets[i];
+                                int idx = p.Id > 0 ? p.Id : (i + 1);
+                                SetValue("IntervalPresets", $"Preset{idx}_Name", p.Name ?? "");
+                                SetValue("IntervalPresets", $"Preset{idx}_Prep", p.Prepare.ToString());
+                                SetValue("IntervalPresets", $"Preset{idx}_Work", p.Work.ToString());
+                                SetValue("IntervalPresets", $"Preset{idx}_Rest", p.Rest.ToString());
+                                SetValue("IntervalPresets", $"Preset{idx}_End", p.End.ToString());
+                                SetValue("IntervalPresets", $"Preset{idx}_Loops", p.Loops.ToString());
+                                SetValue("IntervalPresets", $"Preset{idx}_Infinite", p.IsInfinite.ToString().ToLowerInvariant());
+                            }
+                        }
+
                         SaveHotkeyConfig("ToggleHUD", KeyToggleHUD_Win, KeyToggleHUD_Ctrl, KeyToggleHUD_Alt, KeyToggleHUD_Shift, KeyToggleHUD);
                         SaveHotkeyConfig2("ToggleHUD", KeyToggleHUD_2_Enabled, KeyToggleHUD_2_Win, KeyToggleHUD_2_Ctrl, KeyToggleHUD_2_Alt, KeyToggleHUD_2_Shift, KeyToggleHUD_2);
 
@@ -644,6 +738,39 @@ namespace TimeBomb.Core
                     _debounceTimer.Change(delayMs, System.Threading.Timeout.Infinite);
                 }
             }
+        }
+    }
+
+    public class IntervalPreset
+    {
+        public int Id { get; set; } = 1;
+        public string Name { get; set; } = "Preset";
+        public int Prepare { get; set; } = 5;
+        public int Work { get; set; } = 30;
+        public int Rest { get; set; } = 10;
+        public int End { get; set; } = 5;
+        public int Loops { get; set; } = 5;
+        public bool IsInfinite { get; set; } = false;
+
+        public IntervalPreset Clone()
+        {
+            return new IntervalPreset
+            {
+                Id = this.Id,
+                Name = this.Name,
+                Prepare = this.Prepare,
+                Work = this.Work,
+                Rest = this.Rest,
+                End = this.End,
+                Loops = this.Loops,
+                IsInfinite = this.IsInfinite
+            };
+        }
+
+        public string GetSummary()
+        {
+            string loopText = IsInfinite ? "∞ Loops" : $"{Loops} Loops";
+            return $"Work {Work}s / Rest {Rest}s × {loopText}";
         }
     }
 }
