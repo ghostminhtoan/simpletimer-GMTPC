@@ -168,18 +168,18 @@ namespace TimeBomb
         private void ReadInputsToManager()
         {
             if (Manager == null) return;
-            if (int.TryParse(TxtPrepare.Text, out int prep)) Manager.PrepareSeconds = Math.Max(0, prep);
-            if (int.TryParse(TxtWork.Text, out int work)) Manager.WorkSeconds = Math.Max(1, work);
-            if (int.TryParse(TxtRest.Text, out int rest)) Manager.RestSeconds = Math.Max(0, rest);
-            if (int.TryParse(TxtEnd.Text, out int endVal)) Manager.EndSeconds = Math.Max(0, endVal);
+            if (TxtPrepare != null && int.TryParse(TxtPrepare.Text, out int prep)) Manager.PrepareSeconds = Math.Max(0, prep);
+            if (TxtWork != null && int.TryParse(TxtWork.Text, out int work)) Manager.WorkSeconds = Math.Max(1, work);
+            if (TxtRest != null && int.TryParse(TxtRest.Text, out int rest)) Manager.RestSeconds = Math.Max(0, rest);
+            if (TxtEnd != null && int.TryParse(TxtEnd.Text, out int endVal)) Manager.EndSeconds = Math.Max(0, endVal);
 
             if (ChkInfinite != null && ChkInfinite.IsChecked == true)
             {
                 Manager.IsInfiniteLoops = true;
             }
-            else
+            else if (TxtLoops != null)
             {
-                string loopText = TxtLoops.Text.Trim().ToLowerInvariant();
+                string loopText = (TxtLoops.Text ?? "").Trim().ToLowerInvariant();
                 if (loopText == "0" || loopText == "inf" || loopText == "infinite" || loopText == "∞")
                 {
                     Manager.IsInfiniteLoops = true;
@@ -235,6 +235,8 @@ namespace TimeBomb
 
         private void Input_TextChanged(object sender, TextChangedEventArgs e)
         {
+            if (Manager == null) return;
+
             if (sender == TxtLoops && ChkInfinite != null)
             {
                 string t = TxtLoops.Text.Trim().ToLowerInvariant();
@@ -335,6 +337,8 @@ namespace TimeBomb
 
         private void CheckMatchingPreset()
         {
+            if (TxtPrepare == null || TxtWork == null || TxtRest == null || TxtEnd == null || TxtLoops == null) return;
+
             if (int.TryParse(TxtPrepare.Text, out int prep) &&
                 int.TryParse(TxtWork.Text, out int work) &&
                 int.TryParse(TxtRest.Text, out int rest) &&
