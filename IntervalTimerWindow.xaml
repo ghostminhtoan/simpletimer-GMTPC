@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Interval Timer" 
-        Height="360" Width="320"
+        Height="410" Width="330"
         WindowStyle="None" 
         AllowsTransparency="True" 
         Background="Transparent"
@@ -44,6 +44,39 @@
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter Property="Background" Value="#7723FF23"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CyberPresetButton" TargetType="Button">
+            <Setter Property="Background" Value="#221E1E28"/>
+            <Setter Property="Foreground" Value="#A0FFA0"/>
+            <Setter Property="BorderBrush" Value="#4423FF23"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="2,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#4423FF23"/>
+                                <Setter Property="Foreground" Value="#23FF23"/>
+                                <Setter Property="BorderBrush" Value="#23FF23"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#6623FF23"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -133,6 +166,8 @@
                     <RowDefinition Height="Auto"/>
                     <!-- Status / Loop Info -->
                     <RowDefinition Height="Auto"/>
+                    <!-- Quick Presets -->
+                    <RowDefinition Height="Auto"/>
                     <!-- Inputs Panel -->
                     <RowDefinition Height="*"/>
                     <!-- Action Buttons -->
@@ -201,8 +236,42 @@
                                Margin="0,2,0,0"/>
                 </StackPanel>
 
+                <!-- Quick Presets Bar (5 Presets) -->
+                <Grid Grid.Row="3" Margin="0,0,0,8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Grid.Row="0" Margin="2,0,2,3">
+                        <TextBlock Text="PRESETS (CHỌN NHANH)" 
+                                   FontSize="9" 
+                                   FontWeight="Bold" 
+                                   Foreground="#88AA88" 
+                                   VerticalAlignment="Center"/>
+                    </DockPanel>
+
+                    <UniformGrid Grid.Row="1" Rows="1" Columns="5">
+                        <Button x:Name="BtnPreset1" Content="Tabata" Style="{StaticResource CyberPresetButton}" 
+                                Margin="2,0" ToolTip="Tabata: Work 20s / Rest 10s × 8 Loops (Prep 5s, End 5s)"
+                                Click="BtnPreset_Click" Tag="1"/>
+                        <Button x:Name="BtnPreset2" Content="30 / 15" Style="{StaticResource CyberPresetButton}" 
+                                Margin="2,0" ToolTip="HIIT 30/15: Work 30s / Rest 15s × 5 Loops (Prep 5s, End 5s)"
+                                Click="BtnPreset_Click" Tag="2"/>
+                        <Button x:Name="BtnPreset3" Content="45 / 15" Style="{StaticResource CyberPresetButton}" 
+                                Margin="2,0" ToolTip="Endurance: Work 45s / Rest 15s × 5 Loops (Prep 5s, End 5s)"
+                                Click="BtnPreset_Click" Tag="3"/>
+                        <Button x:Name="BtnPreset4" Content="3m / 1m" Style="{StaticResource CyberPresetButton}" 
+                                Margin="2,0" ToolTip="Boxing: Work 180s (3m) / Rest 60s (1m) × 5 Loops (Prep 5s, End 5s)"
+                                Click="BtnPreset_Click" Tag="4"/>
+                        <Button x:Name="BtnPreset5" Content="25m / 5m" Style="{StaticResource CyberPresetButton}" 
+                                Margin="2,0" ToolTip="Pomodoro: Work 1500s (25m) / Rest 300s (5m) × 4 Loops (Prep 5s, End 5s)"
+                                Click="BtnPreset_Click" Tag="5"/>
+                    </UniformGrid>
+                </Grid>
+
                 <!-- Config Inputs Panel -->
-                <Border Grid.Row="3" 
+                <Border Grid.Row="4" 
                         Background="#251E1E28" 
                         BorderBrush="#35353A" 
                         BorderThickness="1" 
@@ -275,7 +344,7 @@
                 </Border>
 
                 <!-- Action Buttons -->
-                <Grid Grid.Row="4">
+                <Grid Grid.Row="5">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="10"/>

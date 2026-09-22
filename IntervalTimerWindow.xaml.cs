@@ -90,6 +90,7 @@ namespace TimeBomb
         {
             ClampToScreen();
             Manager.UpdateDisplay();
+            CheckMatchingPreset();
         }
 
         public void SetClickThrough(bool enable)
@@ -256,10 +257,99 @@ namespace TimeBomb
             }
 
             ReadInputsToManager();
+            CheckMatchingPreset();
             if (Manager != null && Manager.CurrentPhase == IntervalPhase.Idle)
             {
                 Manager.UpdateDisplay();
             }
+        }
+
+        private void BtnPreset_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && int.TryParse(btn.Tag?.ToString(), out int presetId))
+            {
+                ApplyPreset(presetId);
+            }
+        }
+
+        public void ApplyPreset(int presetId)
+        {
+            int prep = 5, work = 30, rest = 10, end = 5, loops = 5;
+            bool infinite = false;
+
+            switch (presetId)
+            {
+                case 1: // Tabata (Work 20s / Rest 10s × 8 Loops)
+                    prep = 5; work = 20; rest = 10; end = 5; loops = 8;
+                    break;
+                case 2: // HIIT 30/15 (Work 30s / Rest 15s × 5 Loops)
+                    prep = 5; work = 30; rest = 15; end = 5; loops = 5;
+                    break;
+                case 3: // Endurance 45/15 (Work 45s / Rest 15s × 5 Loops)
+                    prep = 5; work = 45; rest = 15; end = 5; loops = 5;
+                    break;
+                case 4: // Boxing 3m/1m (Work 180s / Rest 60s × 5 Loops)
+                    prep = 5; work = 180; rest = 60; end = 5; loops = 5;
+                    break;
+                case 5: // Pomodoro 25m/5m (Work 1500s / Rest 300s × 4 Loops)
+                    prep = 5; work = 1500; rest = 300; end = 5; loops = 4;
+                    break;
+            }
+
+            TxtPrepare.Text = prep.ToString();
+            TxtWork.Text = work.ToString();
+            TxtRest.Text = rest.ToString();
+            TxtEnd.Text = end.ToString();
+            TxtLoops.Text = loops.ToString();
+            if (ChkInfinite != null) ChkInfinite.IsChecked = infinite;
+
+            ReadInputsToManager();
+            HighlightPresetButton(presetId);
+
+            if (Manager != null && Manager.CurrentPhase == IntervalPhase.Idle)
+            {
+                Manager.UpdateDisplay();
+            }
+        }
+
+        private void HighlightPresetButton(int presetId)
+        {
+            var activeBg = new SolidColorBrush(Color.FromArgb(0x55, 0x23, 0xFF, 0x23));
+            var normalBg = new SolidColorBrush(Color.FromArgb(0x22, 0x1E, 0x1E, 0x28));
+            var activeBorder = new SolidColorBrush(Color.FromRgb(0x23, 0xFF, 0x23));
+            var normalBorder = new SolidColorBrush(Color.FromArgb(0x44, 0x23, 0xFF, 0x23));
+            var activeFg = new SolidColorBrush(Color.FromRgb(0x23, 0xFF, 0x23));
+            var normalFg = new SolidColorBrush(Color.FromRgb(0xA0, 0xFF, 0xA0));
+
+            Button[] buttons = { BtnPreset1, BtnPreset2, BtnPreset3, BtnPreset4, BtnPreset5 };
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                if (buttons[i] == null) continue;
+                bool isActive = (i + 1) == presetId;
+                buttons[i].Background = isActive ? activeBg : normalBg;
+                buttons[i].BorderBrush = isActive ? activeBorder : normalBorder;
+                buttons[i].Foreground = isActive ? activeFg : normalFg;
+                buttons[i].FontWeight = isActive ? FontWeights.Bold : FontWeights.SemiBold;
+            }
+        }
+
+        private void CheckMatchingPreset()
+        {
+            if (int.TryParse(TxtPrepare.Text, out int prep) &&
+                int.TryParse(TxtWork.Text, out int work) &&
+                int.TryParse(TxtRest.Text, out int rest) &&
+                int.TryParse(TxtEnd.Text, out int end) &&
+                int.TryParse(TxtLoops.Text, out int loops) &&
+                ChkInfinite?.IsChecked != true)
+            {
+                if (prep == 5 && work == 20 && rest == 10 && end == 5 && loops == 8) { HighlightPresetButton(1); return; }
+                if (prep == 5 && work == 30 && rest == 15 && end == 5 && loops == 5) { HighlightPresetButton(2); return; }
+                if (prep == 5 && work == 45 && rest == 15 && end == 5 && loops == 5) { HighlightPresetButton(3); return; }
+                if (prep == 5 && work == 180 && rest == 60 && end == 5 && loops == 5) { HighlightPresetButton(4); return; }
+                if (prep == 5 && work == 1500 && rest == 300 && end == 5 && loops == 4) { HighlightPresetButton(5); return; }
+            }
+
+            HighlightPresetButton(0);
         }
 
         private void ChkInfinite_Checked(object sender, RoutedEventArgs e)
@@ -398,6 +488,36 @@ namespace TimeBomb
             var itemStop = new MenuItem { Header = "Stop / Reset", Foreground = _greenBrush };
             itemStop.Click += (s, ev) => Manager.Stop();
             menu.Items.Add(itemStop);
+
+            menu.Items.Add(new Separator());
+
+            var presetsMenu = new MenuItem
+            {
+                Header = "⚡ Presets (5 Chế độ chọn nhanh)",
+                Foreground = _greenBrush
+            };
+
+            var p1 = new MenuItem { Header = "1. Tabata (Work 20s / Rest 10s × 8)", Foreground = _greenBrush };
+            p1.Click += (s, ev) => ApplyPreset(1);
+            presetsMenu.Items.Add(p1);
+
+            var p2 = new MenuItem { Header = "2. HIIT 30/15 (Work 30s / Rest 15s × 5)", Foreground = _greenBrush };
+            p2.Click += (s, ev) => ApplyPreset(2);
+            presetsMenu.Items.Add(p2);
+
+            var p3 = new MenuItem { Header = "3. Endurance (Work 45s / Rest 15s × 5)", Foreground = _greenBrush };
+            p3.Click += (s, ev) => ApplyPreset(3);
+            presetsMenu.Items.Add(p3);
+
+            var p4 = new MenuItem { Header = "4. Boxing (Work 3m / Rest 1m × 5)", Foreground = _greenBrush };
+            p4.Click += (s, ev) => ApplyPreset(4);
+            presetsMenu.Items.Add(p4);
+
+            var p5 = new MenuItem { Header = "5. Pomodoro (Focus 25m / Rest 5m × 4)", Foreground = _greenBrush };
+            p5.Click += (s, ev) => ApplyPreset(5);
+            presetsMenu.Items.Add(p5);
+
+            menu.Items.Add(presetsMenu);
 
             menu.Items.Add(new Separator());
 

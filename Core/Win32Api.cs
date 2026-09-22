@@ -225,5 +225,20 @@ namespace TimeBomb.Core
         [DllImport("kernel32.dll")]
         public static extern uint GetCurrentThreadId();
         #endregion
+
+        #region WinEvent Hook (Virtual Desktop & Shell Switch)
+        public delegate void WinEventProc(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
+
+        public const uint EVENT_SYSTEM_DESKTOPSWITCH = 0x0020;
+        public const uint WINEVENT_OUTOFCONTEXT = 0x0000;
+        public const uint WINEVENT_SKIPOWNPROCESS = 0x0002;
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventProc lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool UnhookWinEvent(IntPtr hWinEventHook);
+        #endregion
     }
 }

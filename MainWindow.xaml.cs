@@ -623,6 +623,11 @@ namespace TimeBomb
                     VirtualDesktopManagerHelper.MoveWindowToNextDesktop(handle);
                 }
 
+                if (System.Windows.Application.Current is App app)
+                {
+                    app.RehookKeyboard();
+                }
+
                 ToastNotificationWindow.ShowToast("Bấm Windows + Tab để chuyển desktop nếu cần", 4.0);
             }
             catch { }

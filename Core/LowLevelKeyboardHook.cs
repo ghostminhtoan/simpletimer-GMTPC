@@ -39,22 +39,118 @@ namespace TimeBomb.Core
         public bool ShortcutExecuted => _shortcutExecuted;
 
         private System.Windows.Threading.DispatcherTimer _retryHookTimer;
+        private System.Windows.Threading.DispatcherTimer _watchdogTimer;
         private System.Threading.Thread _hookThread;
         private uint _hookThreadId = 0;
         private readonly System.Threading.ManualResetEvent _hookStartedEvent = new System.Threading.ManualResetEvent(false);
         private volatile bool _isRunning = false;
         private const uint WM_REHOOK = Win32Api.WM_USER + 1;
 
+        private IntPtr _winEventHook = IntPtr.Zero;
+        private readonly Win32Api.WinEventProc _winEventProc;
+
         public LowLevelKeyboardHook(SettingsManager settings = null)
         {
             _settings = settings;
             _proc = HookCallback;
+            _winEventProc = OnWinEvent;
             StartHookThread();
+            StartWinEventHook();
+            StartWatchdog();
         }
 
         public void SetSettings(SettingsManager settings)
         {
             _settings = settings;
+        }
+
+        private void StartWinEventHook()
+        {
+            try
+            {
+                if (_winEventHook == IntPtr.Zero)
+                {
+                    _winEventHook = Win32Api.SetWinEventHook(
+                        Win32Api.EVENT_SYSTEM_DESKTOPSWITCH,
+                        Win32Api.EVENT_SYSTEM_DESKTOPSWITCH,
+                        IntPtr.Zero,
+                        _winEventProc,
+                        0,
+                        0,
+                        Win32Api.WINEVENT_OUTOFCONTEXT | Win32Api.WINEVENT_SKIPOWNPROCESS);
+                }
+            }
+            catch { }
+        }
+
+        private void OnWinEvent(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
+        {
+            if (eventType == Win32Api.EVENT_SYSTEM_DESKTOPSWITCH)
+            {
+                ResetKeyState();
+                Rehook();
+            }
+        }
+
+        private void StartWatchdog()
+        {
+            try
+            {
+                var dispatcher = System.Windows.Application.Current?.Dispatcher;
+                if (dispatcher != null)
+                {
+                    _watchdogTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background, dispatcher)
+                    {
+                        Interval = TimeSpan.FromSeconds(5)
+                    };
+                    _watchdogTimer.Tick += (s, e) => WatchdogCheck();
+                    _watchdogTimer.Start();
+                }
+            }
+            catch { }
+        }
+
+        private void WatchdogCheck()
+        {
+            try
+            {
+                // 1. If Win is marked as down but neither physical Win key is pressed, reset flag
+                if (_isWinDown)
+                {
+                    bool isWinPhys = (Win32Api.GetAsyncKeyState(Win32Api.VK_LWIN) & 0x8000) != 0
+                                  || (Win32Api.GetAsyncKeyState(Win32Api.VK_RWIN) & 0x8000) != 0;
+                    if (!isWinPhys)
+                    {
+                        _isWinDown = false;
+                    }
+                }
+
+                // 2. If hold flags are set but physically released, stop holds
+                if (_isUpHeld && (Win32Api.GetAsyncKeyState(Win32Api.VK_UP) & 0x8000) == 0)
+                {
+                    _isUpHeld = false;
+                    DispatchAction(() => OnAdjustUpStop?.Invoke());
+                }
+                if (_isDownHeld && (Win32Api.GetAsyncKeyState(Win32Api.VK_DOWN) & 0x8000) == 0)
+                {
+                    _isDownHeld = false;
+                    DispatchAction(() => OnAdjustDownStop?.Invoke());
+                }
+
+                // 3. Ensure hook is alive and registered
+                EnsureHook();
+            }
+            catch { }
+        }
+
+        public void ResetKeyState()
+        {
+            _isWinDown = false;
+            _isUpHeld = false;
+            _isDownHeld = false;
+            _shortcutExecuted = false;
+            _suppressNextEscUp = false;
+            _suppressStartMenuOnWinUp = false;
         }
 
         private void StartHookThread()
@@ -104,6 +200,7 @@ namespace TimeBomb.Core
         {
             try
             {
+                ResetKeyState();
                 if (_hookThreadId != 0)
                 {
                     Win32Api.PostThreadMessage(_hookThreadId, WM_REHOOK, UIntPtr.Zero, IntPtr.Zero);
@@ -242,6 +339,7 @@ namespace TimeBomb.Core
 
                     var hookStruct = (Win32Api.KBDLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(Win32Api.KBDLLHOOKSTRUCT));
                     uint vk = hookStruct.vkCode;
+                    bool isInjected = (hookStruct.flags & 0x10) != 0;
 
                     // 1. Alarm Active: Pressing ANY key on keyboard immediately dismisses the alarm
                     if (IsAlarmActive != null && IsAlarmActive())
@@ -254,19 +352,19 @@ namespace TimeBomb.Core
                         }
                     }
 
-                    // Safety check: verify if Windows key is physically held down (skip check while holding Up/Down)
+                    // Physical Win key state check: don't let _isWinDown stay stuck if physically released
+                    bool isWinPhysicallyDown = (Win32Api.GetAsyncKeyState(Win32Api.VK_LWIN) & 0x8000) != 0
+                                            || (Win32Api.GetAsyncKeyState(Win32Api.VK_RWIN) & 0x8000) != 0;
                     if (_isWinDown && !_isUpHeld && !_isDownHeld && vk != Win32Api.VK_LWIN && vk != Win32Api.VK_RWIN)
                     {
-                        bool isWinPhysicallyDown = (Win32Api.GetAsyncKeyState(Win32Api.VK_LWIN) & 0x8000) != 0
-                                                || (Win32Api.GetAsyncKeyState(Win32Api.VK_RWIN) & 0x8000) != 0;
                         if (!isWinPhysicallyDown)
                         {
                             _isWinDown = false;
                         }
                     }
 
-                    // Track Windows key (Left or Right)
-                    if (vk == Win32Api.VK_LWIN || vk == Win32Api.VK_RWIN)
+                    // Track Windows key (Left or Right) - ignore synthetic injected keys
+                    if (!isInjected && (vk == Win32Api.VK_LWIN || vk == Win32Api.VK_RWIN))
                     {
                         if (isKeyDown)
                         {
@@ -296,9 +394,7 @@ namespace TimeBomb.Core
                     }
 
                     // Read real-time state of physical modifier keys
-                    bool currentWin = _isWinDown
-                                   || (Win32Api.GetAsyncKeyState(Win32Api.VK_LWIN) & 0x8000) != 0
-                                   || (Win32Api.GetAsyncKeyState(Win32Api.VK_RWIN) & 0x8000) != 0;
+                    bool currentWin = isWinPhysicallyDown || _isWinDown;
                     bool currentCtrl = (Win32Api.GetAsyncKeyState(Win32Api.VK_CONTROL) & 0x8000) != 0;
                     bool currentAlt = (Win32Api.GetAsyncKeyState(Win32Api.VK_MENU) & 0x8000) != 0;
                     bool currentShift = (Win32Api.GetAsyncKeyState(Win32Api.VK_SHIFT) & 0x8000) != 0;
@@ -491,6 +587,20 @@ namespace TimeBomb.Core
         {
             _isRunning = false;
             StopRetry();
+            if (_watchdogTimer != null)
+            {
+                try { _watchdogTimer.Stop(); } catch { }
+                _watchdogTimer = null;
+            }
+            if (_winEventHook != IntPtr.Zero)
+            {
+                try
+                {
+                    Win32Api.UnhookWinEvent(_winEventHook);
+                    _winEventHook = IntPtr.Zero;
+                }
+                catch { }
+            }
             if (_hookThreadId != 0)
             {
                 try

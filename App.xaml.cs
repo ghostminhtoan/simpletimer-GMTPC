@@ -797,6 +797,7 @@ namespace TimeBomb
                 moveDeskItem.Click += (s, ev) =>
                 {
                     activeInst.Window.MoveToNextDesktop();
+                    RehookKeyboard();
                 };
                 contextMenu.Items.Add(moveDeskItem);
 
@@ -976,6 +977,16 @@ namespace TimeBomb
             try
             {
                 Environment.Exit(0);
+            }
+            catch { }
+        }
+
+        public void RehookKeyboard()
+        {
+            try
+            {
+                _hook?.ResetKeyState();
+                _hook?.Rehook();
             }
             catch { }
         }

@@ -213,6 +213,16 @@ namespace TimeBomb.Core
                 Win32Api.keybd_event((byte)Win32Api.VK_LWIN, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
             }
             catch { }
+            finally
+            {
+                try
+                {
+                    // Ensure modifier keys are physically released in the input queue
+                    Win32Api.keybd_event((byte)Win32Api.VK_CONTROL, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
+                    Win32Api.keybd_event((byte)Win32Api.VK_LWIN, 0, Win32Api.KEYEVENTF_KEYUP, UIntPtr.Zero);
+                }
+                catch { }
+            }
         }
     }
 }
